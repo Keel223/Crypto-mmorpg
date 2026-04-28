@@ -1,4 +1,4 @@
-const express = require('express');
+construction express = require('express');
 const cors = require('cors');
 const app = express();
 
@@ -13,7 +13,7 @@ let db = {
     nextItemId: 1
 };
 
-const FAUCETPAY_API_KEY = 'ТВОЙ_API_КЛЮЧ_FAUCETPAY'; // Вставь ключ, если будешь тестировать вывод
+const FAUCETPAY_API_KEY = '6093864477e0ad75814f955d6d382665829b1912072310cbfcd17f6a499b77c9'; // Вставь ключ, если будешь тестировать вывод
 const FAUCETPAY_CURRENCY = 'BTC';
 
 // Защита от спама атак
