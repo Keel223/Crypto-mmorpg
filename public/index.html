@@ -10,12 +10,23 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'JetBrains Mono', monospace; }
         body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         
+        /* Уведомления (Тосты) */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 14px; animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .toast-error { background: #d32f2f; border-left: 4px solid #ff5252; }
+        .toast-success { background: #388e3c; border-left: 4px solid var(--neon); }
+        .toast-info { background: #1565c0; border-left: 4px solid #42a5f5; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
         #authScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; flex-direction: column; }
         .auth-box { background: var(--panel); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 300px; box-shadow: 0 0 20px rgba(0,255,157,0.1); }
         .auth-box h2 { color: var(--neon); text-align: center; margin-bottom: 20px; font-size: 20px; }
-        .input-field { width: 100%; padding: 12px; margin-bottom: 15px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-family: inherit; }
-        .btn-neon { width: 100%; padding: 12px; background: var(--neon); color: #000; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; font-family: inherit; margin-bottom: 10px; }
-        .error-msg { color: var(--hp); font-size: 12px; text-align: center; margin-top: 10px; display: none; }
+        .input-field { width: 100%; padding: 12px; margin-bottom: 15px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-family: inherit; outline: none; transition: 0.2s; }
+        .input-field:focus { border-color: var(--neon); }
+        .btn-neon { width: 100%; padding: 12px; background: var(--neon); color: #000; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; font-family: inherit; margin-bottom: 10px; transition: 0.2s; }
+        .btn-neon:hover { box-shadow: 0 0 15px var(--neon); }
+        .btn-neon:disabled { opacity: 0.6; cursor: not-allowed; }
 
         #gameUI { display: none; height: 100vh; flex-direction: column; }
         .top-bar { background: var(--panel); padding: 15px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); align-items: center; flex-shrink: 0; }
@@ -65,15 +76,17 @@
 </head>
 <body>
 
+    <!-- Контейнер для уведомлений -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div id="authScreen">
         <div class="auth-box">
             <h2>⚔️ CRYPTO REALM</h2>
-            <input type="text" id="regUser" class="input-field" placeholder="Логин">
+            <input type="text" id="regUser" class="input-field" placeholder="Логин (мин. 3 символа)">
             <input type="password" id="regPass" class="input-field" placeholder="Пароль">
-            <button class="btn-neon" onclick="register()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
+            <button class="btn-neon" id="btnReg" onclick="register()">ЗАРЕГИСТРИРОВАТЬСЯ</button>
             <div style="text-align:center; color:var(--dim); margin: 10px 0;">или</div>
-            <button class="btn-neon" style="background:transparent; border: 1px solid var(--neon); color: var(--neon);" onclick="login()">ВОЙТИ</button>
-            <div class="error-msg" id="authError"></div>
+            <button class="btn-neon" id="btnLog" style="background:transparent; border: 1px solid var(--neon); color: var(--neon);" onclick="login()">ВОЙТИ</button>
         </div>
     </div>
 
@@ -109,7 +122,7 @@
                     <div id="battleActions" style="display:none; margin-top:20px;">
                         <button class="btn-neon" onclick="doAction('search')">⚔️ Атаковать врага</button>
                     </div>
-                    <div class="log-console" id="gameLog">[ СИСТЕМА ] Добро пожаловать.</div>
+                    <div class="log-console" id="gameLog">[ СИСТЕМА ] Добро пожаловать в мир Crypto Realm.</div>
                 </div>
 
                 <div class="page" id="page-inventory">
@@ -157,33 +170,79 @@
     </div>
 
 <script>
-const API = '/api'; // Так как файлы на одном сервере, просто пишем /api
+const API = '/api'; 
 let currentUser = null;
 let selectedItemId = null;
 
+// СИСТЕМА УВЕДОМЛЕНИЙ
+function showToast(message, type = 'error') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerText = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000); // Удаляется через 3 секунды
+}
+
+// БЛОКИРОВКА КНОПОК НА ВРЕМЯ ЗАГРУЗКИ
+function toggleAuthBtns(disabled) {
+    document.getElementById('btnReg').disabled = disabled;
+    document.getElementById('btnLog').disabled = disabled;
+}
+
 async function register() {
-    const u = document.getElementById('regUser').value;
+    const u = document.getElementById('regUser').value.trim();
     const p = document.getElementById('regPass').value;
-    const res = await fetch(`${API}/register`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: u, password: p}) });
+    
+    if(u.length < 3) return showToast('Логин должен быть минимум 3 символа', 'error');
+    if(!p) return showToast('Введите пароль', 'error');
+
+    toggleAuthBtns(true);
+    
+    const res = await fetch(`${API}/register`, { 
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({username: u, password: p}) 
+    });
     const data = await res.json();
-    if(data.error) return showError(data.error);
-    login();
+    
+    toggleAuthBtns(false);
+
+    if(data.error) {
+        showToast(data.error, 'error'); // Покажет "Логин занят" красным тостом
+    } else {
+        showToast('Аккаунт создан! Входим...', 'success');
+        setTimeout(() => login(), 500); // Автоматический вход после успешной регистрации
+    }
 }
 
 async function login() {
-    const u = document.getElementById('regUser').value;
+    const u = document.getElementById('regUser').value.trim();
     const p = document.getElementById('regPass').value;
-    const res = await fetch(`${API}/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: u, password: p}) });
-    const data = await res.json();
-    if(data.error) return showError(data.error);
     
-    currentUser = data.username;
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('gameUI').style.display = 'flex';
-    updateUI(data);
-}
+    if(!u || !p) return showToast('Введите логин и пароль', 'error');
 
-function showError(msg) { const el = document.getElementById('authError'); el.innerText = msg; el.style.display = 'block'; }
+    toggleAuthBtns(true);
+
+    const res = await fetch(`${API}/login`, { 
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({username: u, password: p}) 
+    });
+    const data = await res.json();
+    
+    toggleAuthBtns(false);
+
+    if(data.error) {
+        showToast('Неверный логин или пароль', 'error');
+    } else {
+        currentUser = data.username;
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('gameUI').style.display = 'flex';
+        updateUI(data);
+        showToast(`Добро пожаловать, ${currentUser}!`, 'success');
+    }
+}
 
 function showPage(id, btn) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -205,7 +264,21 @@ async function move(loc) {
 async function doAction(action) {
     const res = await fetch(`${API}/action`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username: currentUser, action: action}) });
     const data = await res.json();
-    if(data.error) return logMsg(data.error, 'dmg');
+    
+    // Обработка ошибок из боя
+    if(data.error) {
+        logMsg(data.error, 'dmg');
+        if(data.error.includes('мертвы')) {
+            // Телепортируем в город, если умер
+            document.getElementById('locTitle').innerText = 'Город-Таверна';
+            document.getElementById('locActions').style.display = 'grid';
+            document.getElementById('battleActions').style.display = 'none';
+            const uRes = await fetch(`${API}/player/${currentUser}`);
+            updateUI(await uRes.json());
+        }
+        return;
+    }
+    
     updateUI(data.user);
     logMsg(data.log, data.type);
 }
@@ -223,12 +296,11 @@ function logMsg(msg, type) {
     log.scrollTop = log.scrollHeight;
 }
 
-// ИНВЕНТАРЬ И РЫНОК
 async function loadInv() {
     const res = await fetch(`${API}/inventory/${currentUser}`);
     const items = await res.json();
     const grid = document.getElementById('invGrid');
-    grid.innerHTML = items.length === 0 ? '<p style="color:var(--dim)">Пусто</p>' : '';
+    grid.innerHTML = items.length === 0 ? '<p style="color:var(--dim)">Инвентарь пуст. Идите на охоту!</p>' : '';
     items.forEach(item => {
         grid.innerHTML += `<div class="item-card"><div class="item-name">${item.name}</div><button class="btn-sm btn-sell" onclick="openSellModal(${item.id}, '${item.name}')">Продать P2P</button></div>`;
     });
@@ -243,31 +315,35 @@ function closeModal() { document.getElementById('sellModal').classList.remove('a
 
 async function confirmSell() {
     const price = parseInt(document.getElementById('sellPrice').value);
-    if(!price) return alert('Укажите цену!');
+    if(!price || price < 1) return showToast('Укажите цену больше 0!', 'error');
     await fetch(`${API}/market/sell`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username: currentUser, itemId: selectedItemId, price }) });
     closeModal();
     loadInv();
-    logMsg('Предмет выставлен на P2P Рынок.', 'sys');
+    showToast('Предмет выставлен на P2P Рынок', 'info');
 }
 
 async function loadMarket() {
     const res = await fetch(`${API}/market`);
     const items = await res.json();
     const grid = document.getElementById('marketGrid');
-    grid.innerHTML = items.length === 0 ? '<p style="color:var(--dim)">Рынок пуст</p>' : '';
+    grid.innerHTML = items.length === 0 ? '<p style="color:var(--dim)">Рынок пуст. Фармите лут!</p>' : '';
     items.forEach(item => {
         const isMyItem = item.seller === currentUser;
-        grid.innerHTML += `<div class="item-card"><div class="item-name">${item.itemName}</div><div style="color:var(--gold); font-size:12px;">${item.price} GC</div>${isMyItem ? '<div style="color:var(--dim); font-size:10px;">Твой лот</div>' : `<button class="btn-sm" onclick="buyItem(${item.id})">Купить</button>`}</div>`;
+        grid.innerHTML += `<div class="item-card">
+            <div class="item-name">${item.itemName}</div>
+            <div style="color:var(--gold); font-size:12px; margin-top:5px;">${item.price} GC</div>
+            ${isMyItem ? '<div style="color:var(--dim); font-size:10px;">Твой лот</div>' : `<button class="btn-sm" onclick="buyItem(${item.id})">Купить</button>`}
+        </div>`;
     });
 }
 
 async function buyItem(lotId) {
     const res = await fetch(`${API}/market/buy`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username: currentUser, lotId }) });
     const data = await res.json();
-    if(data.error) return alert(data.error);
-    logMsg(data.log, 'loot');
+    if(data.error) return showToast(data.error, 'error');
+    
+    showToast(data.log, 'success');
     loadMarket();
-    // Обновляем золото
     const uRes = await fetch(`${API}/player/${currentUser}`);
     updateUI(await uRes.json());
 }
@@ -279,12 +355,13 @@ async function withdrawFP() {
     
     if(!email || !amount) return statusEl.innerHTML = '<span style="color:var(--hp)">Заполните поля</span>';
     
-    statusEl.innerHTML = 'Отправка...';
+    statusEl.innerHTML = 'Отправка запроса...';
     const res = await fetch(`${API}/faucet/withdraw`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username: currentUser, email, goldToWithdraw: amount }) });
     const data = await res.json();
     
-    if(data.error) statusEl.innerHTML = `<span style="color:var(--hp)">${data.error}</span>`;
-    else {
+    if(data.error) {
+        statusEl.innerHTML = `<span style="color:var(--hp)">${data.error}</span>`;
+    } else {
         statusEl.innerHTML = `<span style="color:var(--neon)">${data.message}</span>`;
         const uRes = await fetch(`${API}/player/${currentUser}`);
         updateUI(await uRes.json());
@@ -292,4 +369,4 @@ async function withdrawFP() {
 }
 </script>
 </body>
-          </html>
+                            </html>
