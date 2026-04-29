@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto MMO (Server)</title>
+    <style>
+        :root { --bg: #121212; --panel: #1e1e1e; --border: #333; --gold: #f1c40f; --hp: #e74c3c; --success: #2ecc71; --text: #ecf0f1; }
+        body { background: var(--bg); color: var(--text); font-family: monospace; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .game-container { max-width: 900px; width: 100%; }
+        h1, h2, h3 { margin-top: 0; color: var(--gold); }
+        .panel { background: var(--panel); border: 1px solid var(--border); padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .row { display: flex; gap: 20px; } .col { flex: 1; }
+        button { background: #3498db; color: white; border: none; padding: 8px 15px; cursor: pointer; font-family: inherit; font-weight: bold; border-radius: 3px; }
+        button:hover { opacity: 0.8; } button.danger { background: var(--hp); } button.success { background: var(--success); }
+        input { background: #2a2a2a; color: white; border: 1px solid var(--border); padding: 8px; font-family: inherit; width: 100%; box-sizing: border-box; margin-bottom: 5px; }
+        .item { border: 1px solid var(--border); padding: 10px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; background: #252525; }
+        .market-item { border-left: 4px solid var(--success); }
+        .msg { padding: 10px; margin-bottom: 15px; border-radius: 3px; font-weight: bold; display: none; }
+        .auth-box { max-width: 300px; margin: 100px auto; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="authScreen" class="auth-box panel">
+    <h2 style="text-align: center">CRYPTO MMO</h2>
+    <input type="text" id="loginInput" placeholder="Имя персонажа">
+    <button onclick="login()" style="width: 100%">Войти</button>
+</div>
+
+<div id="gameScreen" class="game-container hidden">
+    <div class="panel" style="display: flex; justify-content: space-between; align-items: center;">
+        <div><h2 id="playerName">Игрок</h2><div>💰 Баланс: <span id="goldDisplay" style="color: var(--gold); font-size: 20px;">0</span></div></div>
+        <button class="danger" onclick="location.reload()">Выйти</button>
+    </div>
+    <div id="gameMsg" class="msg"></div>
+
+    <div class="panel">
+        <button onclick="fight()" style="width: 100%; padding: 15px; font-size: 18px; background: #8e44ad;">⚔️ БИТЬ МОНСТРА ⚔️</button>
+    </div>
+
+    <div class="row">
+        <div class="col panel">
+            <h3>🎒 Инвентарь</h3>
+            <div id="inventoryList"></div>
+        </div>
+        <div class="col panel">
+            <h3>🏪 P2P Рынок</h3>
+            <div id="marketList"></div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>🏦 Авто-Вывод (FaucetPay)</h3>
+        <div style="display: flex; gap: 10px;">
+            <input type="email" id="fpEmail" placeholder="FaucetPay Email">
+            <input type="number" id="withdrawAmount" placeholder="Сумма 💰" min="1000">
+            <button class="success" onclick="withdraw()">Вывести USDT</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUser = '';
+    let userData = {};
+    let marketData = [];
+
+    const API = '/api'; // На Vercel проксируется автоматически
+
+    async function apiCall(endpoint, body = {}) {
+        const res = await fetch(API + endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser, ...body })
+        });
+        return res.json();
+    }
+
+    function showMsg(text, type = 'info') {
+        const el = document.getElementById('gameMsg');
+        el.innerText = text;
+        el.style.display = 'block';
+        el.style.background = type === 'error' ? 'var(--hp)' : type === 'success' ? 'var(--success)' : '#3498db';
+        setTimeout(() => el.style.display = 'none', 4000);
+    }
+
+    async function login() {
+        currentUser = document.getElementById('loginInput').value.trim();
+        if (!currentUser) return;
+        const data = await apiCall('/login');
+        if (data.success) {
+            userData = data.user;
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            syncData();
+        }
+    }
+
+    async function syncData() {
+        const data = await apiCall('/sync');
+        userData = data.user;
+        marketData = data.market;
+        render();
+    }
+
+    async function fight() {
+        const data = await apiCall('/fight');
+        showMsg(data.message, 'success');
+        userData = data.user;
+        render();
+    }
+
+    async function sellItem(index) {
+        const price = prompt("Введите цену в золоте:");
+        if (!price) return;
+        const data = await apiCall('/market/sell', { itemIndex: index, price: parseInt(price) });
+        if(data.error) return showMsg(data.error, 'error');
+        showMsg(data.message, 'success');
+        userData = data.user; marketData = data.market;
+        render();
+    }
+
+    async function buyItem(lotId) {
+        const data = await apiCall('/market/buy', { lotId: lotId });
+        if(data.error) return showMsg(data.error, 'error');
+        showMsg(data.message, 'success');
+        userData = data.user; marketData = data.market;
+        render();
+    }
+
+    async function withdraw() {
+        const email = document.getElementById('fpEmail').value;
+        const amount = parseInt(document.getElementById('withdrawAmount').value);
+        if(!email || !amount) return showMsg("Заполните поля", 'error');
+        
+        showMsg("Отправляем запрос на FaucetPay... Подождите!", 'info');
+        const data = await apiCall('/withdraw', { email, amountGold: amount });
+        
+        if(data.error) return showMsg(data.error, 'error');
+        showMsg(data.message, 'success');
+        userData = data.user;
+        render();
+    }
+
+    function render() {
+        document.getElementById('playerName').innerText = currentUser;
+        document.getElementById('goldDisplay').innerText = userData.gold;
+
+        document.getElementById('inventoryList').innerHTML = userData.inventory.length === 0 ? '<p>Пусто</p>' :
+            userData.inventory.map((item, idx) => `<div class="item"><span>🔰 ${item}</span><button class="danger" onclick="sellItem(${idx})">Продать</button></div>`).join('');
+
+        document.getElementById('marketList').innerHTML = marketData.length === 0 ? '<p>Пусто</p>' :
+            marketData.map(m => `<div class="item market-item"><span>⚔️ ${m.itemName} (${m.seller})<br><small style="color:var(--gold)">${m.price} 💰</small></span>${m.seller !== currentUser ? `<button class="success" onclick="buyItem(${m.id})">Купить</button>` : ''}</div>`).join('');
+    }
+</script>
+</body>
+</html>
