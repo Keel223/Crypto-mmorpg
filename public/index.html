@@ -18,8 +18,9 @@
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
         #authScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; flex-direction: column; }
-        .auth-box { background: var(--panel); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 300px; box-shadow: 0 0 20px rgba(0,255,157,0.1); }
-        .auth-box h2 { color: var(--neon); text-align: center; margin-bottom: 20px; font-size: 20px; }
+        .auth-box { background: var(--panel); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 320px; box-shadow: 0 0 20px rgba(0,255,157,0.1); }
+        .auth-box h2 { color: var(--neon); text-align: center; margin-bottom: 10px; font-size: 20px; }
+        .auth-box p { color: var(--dim); font-size: 12px; text-align: center; margin-bottom: 20px; line-height: 1.5; }
         .input-field { width: 100%; padding: 12px; margin-bottom: 15px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-family: inherit; outline: none; }
         .btn-neon { width: 100%; padding: 12px; background: var(--neon); color: #000; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; font-family: inherit; margin-bottom: 10px; }
         .btn-neon:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -77,11 +78,9 @@
     <div id="authScreen">
         <div class="auth-box">
             <h2>CRYPTO REALM</h2>
-            <input type="text" id="regUser" class="input-field" placeholder="Login">
-            <input type="password" id="regPass" class="input-field" placeholder="Password">
-            <button class="btn-neon" id="btnReg" onclick="register()">REGISTER</button>
-            <div style="text-align:center; color:var(--dim); margin: 10px 0;">or</div>
-            <button class="btn-neon" id="btnLog" style="background:transparent; border: 1px solid var(--neon); color: var(--neon);" onclick="login()">LOGIN</button>
+            <p>Введите ваш Email от FaucetPay.<br>На вашем балансе должен быть минимум 1 Satoshi (защита от ботов).</p>
+            <input type="email" id="fpEmail" class="input-field" placeholder="email@faucetpay.com">
+            <button class="btn-neon" id="btnLog" onclick="login()">ВOЙТИ ЧЕРЕЗ FAUCETPAY</button>
         </div>
     </div>
 
@@ -133,9 +132,8 @@
                 <div class="page" id="page-faucet">
                     <div class="auth-box wd-box">
                         <h2>FaucetPay</h2>
-                        <input type="email" id="wdEmail" class="input-field" placeholder="Email" style="color:#fff;">
-                        <input type="number" id="wdAmount" class="input-field" placeholder="Amount" style="color:var(--gold);">
-                        <button class="btn-neon" style="background: var(--hp);" onclick="alert('API Required')">WITHDRAW</button>
+                        <input type="number" id="wdAmount" class="input-field" placeholder="Amount Gold" style="color:var(--gold);">
+                        <button class="btn-neon" style="background: var(--hp);" onclick="alert('API Required')">WITHDRAW SATOSHI</button>
                     </div>
                 </div>
             </div>
@@ -163,21 +161,7 @@
 
 <script>
 const API = "/api";
-
-// Словарь для перевода ответов сервера
-const LANG = {
-    "SHORT": "Минимум 3 символа",
-    "TAKEN": "Этот логин уже занят",
-    "WRONG": "Неверный логин или пароль",
-    "NOAUTH": "Не авторизован",
-    "DEAD": "Вы мертвы! Идите отдыхать.",
-    "NOITEM": "Нет предмета",
-    "SOLD": "Предмет уже куплен",
-    "SELF": "Нельзя купить свое",
-    "GOLD": "Недостаточно золота",
-    "ERR": "Ошибка сервера"
-};
-
+const LANG = {"EMAIL":"Введите корректный Email","NO_FUNDS":"На FaucetPay балансе пусто! (Нужен мин. 1 Sat)","NOAUTH":"Нет авторизации","DEAD":"Вы мертвы! Идите отдыхать.","NOITEM":"Нет предмета","SOLD":"Уже куплен","SELF":"Нельзя купить свое","GOLD":"Мало золота","ERR":"Ошибка"};
 let currentUser = null;
 let selectedItemId = null;
 
@@ -191,27 +175,19 @@ function enterGame(u) {
     document.getElementById("gameLog").innerHTML = "System: Welcome!\n";
 }
 
-async function register() {
-    let u = document.getElementById("regUser").value.trim();
-    let p = document.getElementById("regPass").value;
-    if(u.length<3) return showToast(LANG.SHORT, "error");
-    
-    document.getElementById("btnReg").disabled = true;
-    let r = await fetch(API+"/register", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({username:u, password:p})}).then(r=>r.json());
-    
-    if(r.e) { showToast(LANG[r.e], "error"); document.getElementById("btnReg").disabled = false; return; }
-    
-    showToast("Создано!", "success");
-    let l = await fetch(API+"/login", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({username:u, password:p})}).then(r=>r.json());
-    enterGame(l);
-}
-
 async function login() {
-    let u = document.getElementById("regUser").value.trim();
-    let p = document.getElementById("regPass").value;
-    let r = await fetch(API+"/login", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({username:u, password:p})}).then(r=>r.json());
-    if(r.e) return showToast(LANG[r.e], "error");
-    enterGame(r);
+    let email = document.getElementById("fpEmail").value.trim();
+    if(!email.includes("@")) return showToast(LANG.EMAIL, "error");
+    
+    document.getElementById("btnLog").disabled = true;
+    document.getElementById("btnLog").innerText = "ПРОВЕРКА FAUCETPAY...";
+    
+    try {
+        let r = await fetch(API+"/login", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({email:email})}).then(r=>r.json());
+        
+        if(r.e) { showToast(LANG[r.e], "error"); document.getElementById("btnLog").innerText = "ВОЙТИ ЧЕРЕЗ FAUCETPAY"; document.getElementById("btnLog").disabled = false; return; }
+        enterGame(r);
+    } catch(e) { showToast("Сервер упал", "error"); }
 }
 
 function showPage(id, btn) {
@@ -236,16 +212,14 @@ async function doAction(act) {
     if(r.e) { logMsg(LANG[r.e], "dmg"); if(r.e==="DEAD") { document.getElementById("locTitle").innerText="TAVERN"; document.getElementById("locActions").style.display="grid"; document.getElementById("battleActions").style.display="none"; } return; }
     updateUI(r.user);
     
-    // Перевод логов
     let txt = r.log;
     if(txt.includes("MOVE")) txt = "Вы перешли.";
-    else if(txt === "HEAL") txt = "HP полностью восстановлено.";
-    else if(txt === "SAFE") txt = "Здесь безопасно.";
-    else if(txt.includes("DIED")) txt = "Враг убил вас! Респаун.";
-    else if(txt.includes("KILL")) txt = "Враг убит! +" + txt.split("+")[1] + " EXP.";
-    else if(txt.includes("LOOT:")) txt = "Выпал лут: " + txt.split(":")[1] + ".";
-    else if(txt.includes("HIT")) txt = "Удар! Враг ударил в ответ.";
-    
+    else if(txt === "HEAL") txt = "HP восстановлено.";
+    else if(txt === "SAFE") txt = "Безопасно.";
+    else if(txt.includes("DIED")) txt = "Враг убил вас!";
+    else if(txt.includes("KILL")) txt = "Убийство! +" + txt.split("+")[1];
+    else if(txt.includes("LOOT:")) txt = "Лут: " + txt.split(":")[1];
+    else if(txt.includes("HIT")) txt = "Обмен ударами.";
     logMsg(txt, r.type);
 }
 
@@ -256,7 +230,7 @@ async function loadInv() {
     let items = await fetch(API+"/inv/"+currentUser).then(r=>r.json());
     let g = document.getElementById("invGrid");
     g.innerHTML = items.length===0 ? "<p style='color:var(--dim)'>Empty</p>" : "";
-    items.forEach(i => { g.innerHTML += "<div class='item-card'><div class='item-name'>"+i.name+"</div><button class='btn-sm btn-sell' onclick='openSell("+i.id+", \""+i.name+"\")'>SELL P2P</button></div>"; });
+    items.forEach(i => { g.innerHTML += "<div class='item-card'><div class='item-name'>"+i.name+"</div><button class='btn-sm btn-sell' onclick='openSell("+i.id+", \""+i.name+"\")'>SELL</button></div>"; });
 }
 
 function openSell(id, name) { selectedItemId = id; document.getElementById("sellItemName").innerText = name; document.getElementById("sellModal").classList.add("active"); }
@@ -266,14 +240,14 @@ async function confirmSell() {
     let p = parseInt(document.getElementById("sellPrice").value);
     if(!p) return showToast("Укажи цену","error");
     await fetch(API+"/market/sell", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({username:currentUser, itemId:selectedItemId, price:p})});
-    closeModal(); loadInv(); showToast("Выставлено!","success");
+    closeModal(); loadInv(); showToast("На рынке!","success");
 }
 
 async function loadMarket() {
     let items = await fetch(API+"/market").then(r=>r.json());
     let g = document.getElementById("marketGrid");
     g.innerHTML = items.length===0 ? "<p style='color:var(--dim)'>Empty</p>" : "";
-    items.forEach(i => { let m = i.seller===currentUser; g.innerHTML += "<div class='item-card'><div class='item-name'>"+i.itemName+"</div><div style='color:var(--gold);font-size:12px;margin-top:5px;'>"+i.price+" GOLD</div>"+(m ? "<div style='color:var(--dim);font-size:10px;'>YOUR LOT</div>" : "<button class='btn-sm' onclick='buyItem("+i.id+")'>BUY</button>")+"</div>"; });
+    items.forEach(i => { let m = i.seller===currentUser; g.innerHTML += "<div class='item-card'><div class='item-name'>"+i.itemName+"</div><div style='color:var(--gold);font-size:12px;margin-top:5px;'>"+i.price+" G</div>"+(m ? "<div style='color:var(--dim);font-size:10px;'>YOUR</div>" : "<button class='btn-sm' onclick='buyItem("+i.id+")'>BUY</button>")+"</div>"; });
 }
 
 async function buyItem(id) {
