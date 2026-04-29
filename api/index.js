@@ -1,38 +1,24 @@
 const app = require("express")();
 const cors = require("cors");
-const fetch = require("node-fetch");
-
 app.use(cors());
 app.use(express.json());
 
 let db = {users:{}, inv:[], market:[], id:1};
-const FAUCETPAY_KEY = "6093864477e0ad75814f955d6d382665829b1912072310cbfcd17f6a499b77c9";
-
-// Проверка баланса FaucetPay
-async function checkFaucet(email) {
-    try {
-        let res = await fetch("https://faucetpay.io/api/v1/check/"+email, {
-            headers: {"api_key": FAUCETPAY_KEY}
-        });
-        let data = await res.json();
-        if(data.status === 200) return true;
-        return false;
-    } catch(e) { return false; }
-}
 
 app.post("/api/login", async (req, res) => {
     try {
         let email = req.body.email;
         if (!email || !email.includes("@")) return res.status(400).json({e: "EMAIL"});
         
-        let isValid = await checkFaucet(email);
-        if (!isValid) return res.status(400).json({e: "NO_FUNDS"});
-        
+        // ВРЕМЕННО ОТКЛЮЧИЛИ FAUCETPAY ДЛЯ ТЕСТА!
+        // Просто пускаем любого, кто ввел мыло
         if (!db.users[email]) {
             db.users[email] = {username: email, lvl:1, exp:0, expNeed:50, hp:100, maxHp:100, minDmg:5, maxDmg:10, def:0, gold:0, loc:"city"};
         }
         res.json(db.users[email]);
-    } catch(e) { res.status(500).json({e: "ERR"}); }
+    } catch(e) { 
+        res.status(500).json({e: "CRASH", msg: e.message}); 
+    }
 });
 
 app.get("/api/player/:u", (req, res) => res.json(db.users[req.params.u] || null));
@@ -44,7 +30,7 @@ app.post("/api/action", (req, res) => {
         if (!u) return res.status(403).json({e: "NO"});
         let r = {log: "", type: "sys"};
 
-        if (req.body.action === "move") { u.loc = req.body.target; r.log = "MOVE " + u.loc; }
+        if (req.body.action === "move") { u.loc = req.body.target; r.log = "MOVE"; }
         else if (req.body.action === "rest") { u.hp = u.maxHp; r.log = "HEAL"; r.type = "heal"; }
         else if (req.body.action === "search") {
             if (u.hp <= 0) return res.status(400).json({e: "DEAD"});
