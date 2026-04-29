@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- МЕХАНИЗМ ПРОТИВ КЭША -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>CryptoMMO RPG</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: monospace; background: #111; color: #eee; }
         body { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
         #auth { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111; display: flex; align-items: center; justify-content: center; z-index: 99; }
-        .box { background: #222; padding: 30px; border-radius: 10px; width: 300px; text-align: center; border: 1px solid #333; }
+        .box { background: #222; padding: 30px; border-radius: 10px; width: 300px; text-align: center; border:1px solid #333; }
         .box h2 { color: #0f0; margin-bottom: 20px; font-size: 24px; }
         input { width: 100%; padding: 12px; margin: 10px 0; background: #333; border: 1px solid #444; color: #fff; border-radius: 5px; font-size: 16px; }
         button { width: 100%; padding: 12px; background: #0f0; color: #000; border: none; font-weight: bold; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
@@ -25,7 +29,7 @@
         .content { flex: 1; padding: 20px; overflow-y: auto; }
         .zone-badge { display: inline-block; padding: 5px 15px; border-radius: 5px; margin-bottom: 20px; font-weight: bold; border: 1px solid #555; }
         
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax 150px, 1fr)); gap: 10px; margin-top:20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top:20px; }
         .card { background: #222; border: 1px solid #444; padding: 15px; border-radius: 5px; text-align: center; cursor: pointer; transition: 0.2s; }
         .card:hover { border-color: #0f0; transform: translateY(-2px); }
         .card h3 { font-size: 14px; margin-bottom: 5px; }
@@ -34,7 +38,7 @@
         /* HP Bar врага */
         .enemy-box { background: #1a1a1a; border: 1px solid #f00; padding: 20px; border-radius: 10px; text-align: center; margin-top: 20px; display: none; }
         .enemy-name { font-size: 18px; color: #f00; margin-bottom: 10px; }
-        .hp-bar-bg { width: 100%; height: 15px; background: #333; border-radius: 10px; overflow: hidden; border: 1px solid #555; }
+        .hp-bar-bg { width: 100%; height: 15px; background: #333; border-radius: 10px; overflow: hidden; border: 1px solid #555; position: relative; }
         .hp-bar-fill { height: 100%; background: #f00; transition: width 0.3s; position: relative; }
         .hp-bar-text { position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 11px; line-height: 15px; color: #fff; text-shadow: 1px 1px 2px #000; }
         
@@ -48,7 +52,7 @@
         
         #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
         #modal.active { display: flex; }
-        .modal-box { background: #222; padding: 20px; border-radius: 5px; border: 1px solid #444; width: 250px; text-align: center; }
+        .modal-box { background: #222; padding: 20px; border-radius: 5px; border:1px solid #444; width: 250px; text-align: center; }
         .modal-box input { margin: 10px 0; }
 
         .toast { position: fixed; top: 10px; right: 10px; padding: 10px; background: #d32f2f; color: #fff; border-radius: 5px; font-size: 13px; z-index: 999; }
@@ -71,8 +75,8 @@
                 <div class="stats">Ур: <span id="sLvl">1</span></div>
                 <div class="stats">❤️ <span id="sHp">100/100</span></div>
                 <div class="stats">💰 <span id="sGold">0</span></div>
-                <div class="status-badge" id="fightBadge">⚔️ В БОЮ</div>
             </div>
+            <div class="status-badge" id="fightBadge">⚔️ В БОЮ</div>
             <button class="logout" onclick="location.reload()">EXIT</button>
         </div>
 
@@ -86,12 +90,12 @@
                 </div>
 
                 <div id="moveGrid" class="grid">
-                    <div class="card" onclick="goTo('city')" style="border-color:#0f0"><h3 style="cityssize: 14px;">🏠 Город</h3><p>Отдых, рынок</p></div>
+                    <div class="card" onclick="goTo('city')" style="border-color:#0f0"><h3 style="font-size:14px;">🏠 Город</h3><p>Отдых, рынок</p></div>
                     <div class="card" onclick="goTo('forest')"><h3>🌲 Лес</h3><p>🟢 Безопасно</p></div>
                     <div class="card" onclick="goTo('cave')"><h3>⛰️ Пещера</h3><p>🟡 Средне</p></div>
-                    <div class="card" onclick="goTo('swamp')"><h3🦠 Болото</h3><p>🟡 Средне</p></div>
-                    <div class="card" onclick="goTo('necropolis')"><h3>💀 Некрополь</h3><p>🔴 Опасно</p></div>
-                    <div class="card" onclick="goTo('castle')" style="border-color:#f00"><h3 style="color:#f00">🔥 Замок</h3><p>💀 Смертельно</p></div>
+                    <div class="card" onclick="goTo('swamp')"><h3>🦠 Болото</h3><p>🟡 Средне</p></div>
+                    <div class="card" onclick="goTo('necropolis')"><h3>💀 Некрополис</h3><p>🔴 Опасно</p></div>
+                    <div class="card" onclick="goto('castle')" style="border-color:#f00"><h3 style="color:#f00">🔥 Замок</h3><p>💀 Смертельно</p></div>
                 </div>
                 
                 <div id="actions" style="display:none; margin-top:20px; text-align:center;">
@@ -99,7 +103,7 @@
                     <button class="btn" style="width:100%; margin-top:10px; padding:10px; background:#222; color:#888; border:1px solid #555;" onclick="runAway()">🏃 ПОБЕЖАТЬ</button>
                 </div>
                 
-                <div class="log" id="log">Waiting...</div>
+                <div class="log" id="log">Подключение к серверу...</div>
             </div>
 
             <div id="inv">
@@ -108,9 +112,9 @@
             </div>
 
             <div id="market">
-                <h2>P2P MARKET</h2>
-                <div id="marketList"></div>
-            </div>
+                <h2>P2P MARKET</hoblur: hidden; visibility: hidden; display: none;">
+                    <div id="marketList"></div>
+                </div>
 
             <div id="pay">
                 <div class="box" style="margin: 0 auto; max-width: 300px; text-align: left;">
@@ -133,28 +137,60 @@
     </div>
 
 <script>
+// МАКСИМАЛЬНАЯ ЗАЩИТА ОТ КЭША И СТАРОГО КОДА
+(function() {
+    // Принудительно удаляем старые скрипты из памяти
+    let scripts = document.getElementsByTagName('script');
+    for (let i =нилось 0; i < scripts.length; i++) {
+        if (scripts[i].src) scripts[i].src = scripts[i].src + (scripts[i].src.includes('?') ? '&' : '?') + 'v=' + Date.now();
+    }
+})();
+
 let U = null; 
 let sellId = null; 
 const API = "/api";
 let currentZone = 1;
 
-function show(id) { document.getElementById('map').style.display='none'; document.getElementById('inv').style.display='none'; document.getElementById('market').style.display='none'; document.getElementById('pay').style.display='none'; document.getElementById(id).style.display='block'; }
-function toast(msg, ok) { let d = document.createElement('div'); d.className='toast' + (ok ? ' ok' : ''); d.innerText=msg; document.body.appendChild(d); setTimeout(()=>d.remove(), 3000); }
+function show(id) { 
+    let els = ['map', 'inv', 'market', 'pay']; 
+    els.forEach(e => document.getElementById(e).style.display = 'none'); 
+    document.getElementById(id).style.display = 'block'; 
+}
+
+function toast(msg, ok) { 
+    let d = document.createElement('div'); 
+    d.className = 'toast' + (ok ? ' ok' : ''); 
+    d.innerText = msg; 
+    document.body.appendChild(d); 
+    setTimeout(() => d.remove(), 3000); 
+}
 
 async function startGame() {
     let e = document.getElementById("email").value;
     if(!e.includes("@")) return toast("Wrong email");
-    let btn = document.getElementById("loginBtn"); btn.disabled = true; btn.innerText = "LOADING...";
+    let btn = document.getElementById("loginBtn"); 
+    btn.disabled = true; 
+    btn.innerText = "LOADING...";
+    
     try {
-        let txt = await fetch(API+"/login", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({email: e})}).then(r => r.text());
-        let data = JSON.parse(txt);
-        if (data.e) { toast(data.msg || data.e); btn.disabled = false; btn.innerText="ВОЙТИ"; return; }
+        let txt = await fetch(API+"/login", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({email: e})}).then(r => r.text());
+        let data; 
+        try { data = JSON.parse(txt); } 
+        catch(e) { toast("Старый код в памяти. Закрой вкладку СОВСЕМ и открой заново!", false); btn.disabled = false; btn.innerText="ВОЙТИ"; return; }
+        
+        if (data.e) { toast(data.msg || data.e, false); btn.disabled = false; btn.innerText="ВОЙТИ"; return; }
+        
         U = data;
         document.getElementById("auth").style.display = "none";
         document.getElementById("game").style.display = "flex";
-        document.getElementById("log").innerHTML = "System: Welcome!\n";
-        updUI(); show('map');
-    } catch(err) { toast("Network Error"); btn.disabled = false; btn.innerText="ВОЙТИ"; }
+        document.getElementById("log").innerHTML = "System: Добро пожаловать!\n";
+        updUI(); 
+        show('map');
+    } catch(err) { 
+        toast("Сеть упала. Проверь интернет.", false); 
+        btn.disabled = false; 
+        btn.innerText="ВОЙТИ"; 
+    }
 }
 
 function updUI() {
@@ -163,26 +199,25 @@ function updUI() {
     document.getElementById("sHp").innerText = U.hp + "/" + U.maxHp;
     document.getElementById("sGold").innerText = U.gold;
     
-    // Обновляем UI в зависимости от состояния
     let inBattle = U.currentEnemy && U.currentEnemy.curHp > 0;
-    document.getElementById('moveGrid').style.display = inBattle ? 'none' : 'grid';
-    document.getElementById('actions').style.display = inBattle ? 'block' : 'none';
-    document.getElementById('fightBadge').style.display = inBattle ? 'block' : 'none';
-    document.getElementById('enemyBox').style.display = inBattle ? 'block' 'none';
+    document.getElementById("moveGrid").style.display = inBattle ? 'none' : 'grid';
+    document.getElementById("actions").style.display = inBattle ? 'block' : 'none';
+    document.getElementById("fightBadge").style.display = inBattle ? 'block' : 'none';
+    document.getElementById("enemyBox").style.display = inBattle ? 'block' : 'none';
     
     if(inBattle) {
         let e = U.currentEnemy;
-        document.getElementById('eName').innerText = e.n;
+        document.getElementById("eName").innerText = e.n;
         let pct = Math.max(0, (e.curHp / e.h) * 100);
-        document.getElementById('eHpBar').style.width = pct + '%';
-        document.getElementById('eHpText').innerText = e.curHp + " / " + e.h;
-        document.getElementById('eHpBar').style.background = pct < 25 ? '#f00' : (pct < 60 ? '#f39c12' : '#388e3c');
+        document.getElementById("eHpBar").style.width = pct + '%';
+        document.getElementById("eHpText").innerText = e.curHp + " / " + e.h;
+        document.getElementById("eHpBar").style.background = pct < 25 ? '#f00' : (pct < 60 ? '#f39c12' : '#388c3c');
     }
 }
 
 function updateZone(zone) {
-    currentZone = zone;
-    let zones = {city: [0, "#0f0", "🟢 БЕЗОПАСНАЯ ЗОНА", "Отдых"], forest: [1, "#4caf50", "🟢 Безопасно", "Гоблины, Волки"], cave: [2, "#ffeb3b", "🟡 Средне", "Скелеты, Големы"], swamp: [2, "#ff9800", "🟡 Средне", "Ядовитые Зомби"], necropolis: [3, "#f44336", "🔴 Опасно", "Личи, Призраки"], castle: [4, "#b71c1c", "🔴 Смертельно", "Демоны"]};
+    if(!U) return;
+    let zones = {city: [0, "#0f0", "🟢 БЕЗОПАСНАЯ ЗОНА", "Отдых"], forest: [1, "#4caf50", "🟢 Безопасно", "Гоблины, Волки"], cave: [2, "#ffeb3b", "🟡 Средне", "Скелеты, Големы"], swamp: [2, "#ff9800", "🟡 Средне", "Ядовитые Зомби"], necropolis: [3, "#f44336", "🔴 Опасно", "Личи"], castle: [4, "#b71c1c", "🔴 Смертельно", "Демоны"]};
     let z = zones[U.loc] || zones.city;
     
     let el = document.getElementById("locZone");
@@ -194,54 +229,35 @@ function updateZone(zone) {
 async function goTo(loc) {
     await fetch(API+"/action", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({username: U.username, action: "move", target: loc})});
     document.getElementById("locName").innerText = loc.toUpperCase();
-    delete U.currentEnemy; // Сбрасываем врага при смене локации
-    updUI(); updateZone(loc);
+    delete U.currentEnemy; 
+    updUI(); 
+    updateZone(loc);
     addLog("Перешел в: " + loc, "sys");
 }
 
 async function doAct(act) {
     let txt = await fetch(API+"/action", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({username: U.username, action: act})}).then(r => r.text());
-    let data; try { data = JSON.parse(txt); } catch(e) { addLog("Server error", "dmg"); return; }
+    let data; 
+    try { data = JSON.parse(txt); } 
+    catch(e) { addLog("Ошибка парсинга! Перезагрузи страницу полностью!", "dmg"); return; }
 
     if (data.e) {
-        if(data.e === "DEAD") { addLog("Вы погибли! Респаун в городе.", "dmg"); document.getElementById("locName").innerText="ГОРОД"; U.loc="city"; delete U.currentEnemy; }
+        if(data.e === "DEAD") { addLog("☠️ Вы погибли! Респаун.", "dmg"); document.getElementById("locName").innerText="ГОРОД"; U.loc="city"; delete U.currentLayer; delete U.currentEnemy; }
         else addLog(data.e, "dmg"); 
         updUI(); return; 
     }
     
     updUI(); updateZone(U.loc);
     
-    // Обработка логов боя
     let m = data.log;
-    if (m.includes("FOUND:")) {
-        let parts = m.split("(");
-        let name = parts[0].replace("FOUND: ", "");
-        addLog("Вы встретили: " + name + " (Зона " + "🟢🟡🔴"[data.user.currentEnemy.z-1] + ")", "sys");
-        return;
-    }
-    
+    if (m.includes("FOUND:")) { addLog("Вы встретили: " + m.split("(")[0].replace("FOUND: ", ""), "sys"); return; }
     if (m === "SAFE") { addLog("Безопасно.", "sys"); return; }
+    if (m === "YOU DIED!") { addLog("☠️ Враг убил вас!", "dmg"); return; }
     
-    if (m === "YOU DIED!") {
-        addLog("☠️ Враг убил вас! Вы потеряли сознание.", "dmg");
-        return;
-    }
-    
-    let colors = ["#fff", "#ff4d6d"]; // Белый для обычного урона, красный для смерти
     let logClass = "dmg";
-    
-    if (m.includes("KILLED")) {
-        logClass = "loot"; // Золотой цвет для убийства
-        // Разбираем куски: "KILLED+50 EXP, +20 GOLD. LOOT: Sword"
-        let main = m.split(".")[0]; // "KILLED+50 EXP, +20 GOLD"
-        let lootMsg = m.split(". ").slice(1).join(". "); // "LOOT: Sword"
-        addLog(main, logClass);
-        if(lootMsg.includes("LOOT:")) addLog(lootMsg, "loot");
-    } else if (m.includes("LOOT:")) {
-        addLog(m, "loot"); // Лут без убийства (мало шансно)
-    } else if (m.includes("HEAL")) {
-        logClass = "heal";
-    }
+    if (m.includes("KILLED")) logClass = "loot";
+    else if (m.includes("LOOT:")) logClass = "loot";
+    else if (m.includes("HEAL")) logClass = "heal";
     
     if (m.includes("HP left")) addLog(m, logClass);
     else addLog(m, logClass);
@@ -251,52 +267,27 @@ async function runAway() {
     let chance = Math.random();
     if(chance > 0.5) {
         delete U.currentEnemy;
-        addLog("Вы успешно сбежали!", "sys");
+        addLog("Вы сбежали!", "sys");
         updUI();
     } else {
-        addLog("Побегать не удалось!", "dmg");
-        // Враг делает дополнительный удар
+        addLog("Побегать не удался! Враг атакует!", "dmg");
         let txt = await fetch(API+"/action", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({username: U.username, action: "search"})}).then(r => r.text());
-        let data = JSON.parse(txt);
+        let data; try { data = JSON.parse(txt); } catch(e) { return; }
         updUI();
-        if(data.e === "DEAD") { addLog("Попытка побега провалилась. Враг убил вас.", "dmg"); document.getElementById("locName").innerText="ГОРОД"; U.loc="city"; delete U.currentEnemy; return; }
-        addLog("Попытка провалилась! Враг ударил пока вы убегали: -" + m.split(":")[1], "dmg");
+        if(data.e === "DEAD") { addLog("Побегать провалился. Вы погибли.", "dmg"); document.getElementById("locName").innerText="ГОРОД"; U.loc="city"; delete U.currentEnemy; return; }
+        addLog("Провал! Враг ударил, пока вы убегали!", "dmg");
     }
 }
 
 function addLog(t, c) { let l = document.getElementById("log"); l.innerHTML += "<span class=" + c + "> > " + t + "</span>\n"; l.scrollTop = l.scrollHeight; }
 
 async function loadInv() {
-    let data = JSON.parse(await fetch(API+"/inv/" + U.username).then(r => r.text()));
+    let data = JSON.parse(await fetch(API+"/inv/" + U.username).then(r => r.text());
     let h = ""; 
-    if(data.length === 0) h = "<p style='color:#888'>Empty.</p>";
+    if(data.length === 0) h = "<p style='color:#888'>Пусто.</p>";
     data.forEach(i => { h += "<div class='inv-item'><span>" + i.name + "</span><button class='sell-btn' onclick='openSell(" + i.id + ", \"" + i.name + "\")'>SELL</button></div>"; });
     document.getElementById("invList").innerHTML = h;
 }
 
 function openSell(id, name) { sellId = id; document.getElementById("sellName").innerText = name; document.getElementById("modal").classList.add("active"); }
-function closeModal() { document.getElementById("modal").classList.remove("active"); }
-
-async function confirmSell() {
-    let p = parseInt(document.getElementById("sellPrice").value);
-    if(!p) return toast("Enter price");
-    await fetch(API+"/market/sell", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({username: U.username, itemId: sellId, price: p})});
-    closeModal(); loadInv(); toast("На рынке!", true);
-}
-
-async function loadMarket() {
-    let data = JSON.parse(await fetch(API+"/market").then(r => r.text()));
-    let h = "";
-    if(data.length === 0) h = "<p style='color:#888'>Empty.</p>";
-    data.forEach(i => { let m = i.seller === U.username; h += "<div class='inv-item'><span>" + i.itemName + " (" + i.price + "G)</span>" + (m ? "<span style='color:#888'>YOU</span>" : "<button class='buy-btn' onclick='buyItem(" + i.id + ")'>BUY</button>") + "</div>"; });
-    document.getElementById("marketList").innerHTML = h;
-}
-
-async function buyItem(id) {
-    let data = JSON.parse(await fetch(API+"/market/buy", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({username: U.username, lotId: id})}).then(r => r.text());
-    if(JSON.parse(data).e) return toast(JSON.parse(data).e);
-    toast("Куплено!", true); loadMarket(); updUI();
-}
-</script>
-</body>
-</html>
+function closeModal() { document.getElementById("modal"). <span style="color:#f00">ВНИМАНИЕ: Если видишь старую игру - нажми Ctrl+Shift+R на клавиатуре на ПК или закрой вкладку и открой заново на телефоне!</span> }
