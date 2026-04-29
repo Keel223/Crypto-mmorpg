@@ -1,11 +1,11 @@
-construction express = require('express');
+// Обязательно используем импорт Vercel версии Express!
+const app = require('express')();
 const cors = require('cors');
-const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// БАЗА ДАННЫХ В ОПЕРАТИВНОЙ ПАМЯТИ (СБРОСИТСЯ ПРИ ПЕРЕЗАГРУЗКЕ)
+// БАЗА ДАННЫХ В ОПЕРАТИВНОЙ ПАМЯТИ (СБРОСИТСЯ ПРИ ПЕРЕЗАГРУЗКЕ СЕРВЕРА)
 let db = {
     users: {},
     inventory: [],
@@ -13,7 +13,7 @@ let db = {
     nextItemId: 1
 };
 
-const FAUCETPAY_API_KEY = '6093864477e0ad75814f955d6d382665829b1912072310cbfcd17f6a499b77c9'; // Вставь ключ, если будешь тестировать вывод
+const FAUCETPAY_API_KEY = 'ТВОЙ_API_КЛЮЧ_FAUCETPAY'; // Вставь ключ, если будешь тестировать вывод
 const FAUCETPAY_CURRENCY = 'BTC';
 
 // Защита от спама атак
@@ -171,4 +171,6 @@ app.post('/api/faucet/withdraw', async (req, res) => {
     }
 });
 
+// === САМОЕ ГЛАВНОЕ ДЛЯ VERCEL ===
+// Vercel не запускает app.listen(), нам нужно экспортировать сам объект 'app'
 module.exports = app;
