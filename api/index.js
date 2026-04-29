@@ -6,7 +6,7 @@ app.use(cors());
 app.use(express.json());
 
 let db = {users:{}, inv:[], market:[], id:1};
-const FAUCETPAY_KEY = "YOUR_KEY_HERE";
+const FAUCETPAY_KEY = "6093864477e0ad75814f955d6d382665829b1912072310cbfcd17f6a499b77c9";
 
 // Проверка баланса FaucetPay
 async function checkFaucet(email) {
