@@ -5,15 +5,15 @@ let timerIntervalId = null;
 
 const RES_NAMES = { wood: '🪵Дерево', stone: '🪨Камень', iron: '⛏️Железо', food: '🌾Еда', mana: '🔮Мана' };
 const BUILDING_META = {
-    townhall: { name: '🏛️ Ратуша', baseCost: { wood: 1000, stone: 1000, iron: 500 } },
-    woodcutter: { name: '🪵 Лесопилка', baseCost: { wood: 200, stone: 50 } },
-    mine: { name: '⛏️ Шахта (Железо)', baseCost: { wood: 100, stone: 200, iron: 50 } },
-    quarry: { name: '🪨 Каменоломня', baseCost: { wood: 150, stone: 50, iron: 20 } },
-    farm: { name: '🌾 Ферма', baseCost: { wood: 150, stone: 50 } },
-    barrack: { name: '⚔️ Казарма', baseCost: { wood: 300, stone: 500, iron: 300 } },
-    archery: { name: '🏹 Стрельбище', baseCost: { wood: 400, stone: 200, iron: 400 } },
-    stable: { name: '🐎 Конюшня', baseCost: { wood: 500, stone: 300, iron: 600 } },
-    tower: { name: '🔮 Башня Мага', baseCost: { wood: 1000, stone: 800, iron: 500, mana: 100 } }
+    townhall: { name: '🏛️ Ратуша', baseCost: { wood: 1000, stone: 1000, iron: 500 }, baseHp: 100 },
+    woodcutter: { name: '🪵 Лесопилка', baseCost: { wood: 200, stone: 50 }, baseHp: 50 },
+    mine: { name: '⛏️ Шахта', baseCost: { wood: 100, stone: 200, iron: 50 }, baseHp: 60 },
+    quarry: { name: '🪨 Каменоломня', baseCost: { wood: 150, stone: 50, iron: 20 }, baseHp: 60 },
+    farm: { name: '🌾 Ферма', baseCost: { wood: 150, stone: 50 }, baseHp: 40 },
+    barrack: { name: '⚔️ Казарма', baseCost: { wood: 300, stone: 500, iron: 300 }, baseHp: 80 },
+    archery: { name: '🏹 Стрельбище', baseCost: { wood: 400, stone: 200, iron: 400 }, baseHp: 70 },
+    stable: { name: '🐎 Конюшня', baseCost: { wood: 500, stone: 300, iron: 600 }, baseHp: 90 },
+    tower: { name: '🔮 Башня Мага', baseCost: { wood: 1000, stone: 800, iron: 500, mana: 100 }, baseHp: 150 }
 };
 
 async function apiCall(data) {
@@ -67,24 +67,17 @@ function startTimers() {
         if (!currentUser) return;
         const now = Date.now();
         
-        // Строительство
         if (currentUser.construction) {
-            document.getElementById('construction-bar').style.display = 'block';
-            document.getElementById('con-name').innerText = BUILDING_META[currentUser.construction.building]?.name || 'Здание';
+            document.getElementById('con-bar').style.display = 'block';
             const secLeft = Math.max(0, Math.ceil((currentUser.construction.finishTime - now) / 1000));
-            document.getElementById('con-time').innerText = secLeft;
-        } else {
-            document.getElementById('construction-bar').style.display = 'none';
-        }
+            document.getElementById('con-text').innerText = `Строится ${BUILDING_META[currentUser.construction.building]?.name} (${secLeft}с)`;
+        } else document.getElementById('con-bar').style.display = 'none';
 
-        // Экспедиция
-        if (currentUser.expedition) {
-            document.getElementById('expedition-bar').style.display = 'block';
-            const secLeft = Math.max(0, Math.ceil((currentUser.expedition.finishTime - now) / 1000));
-            document.getElementById('exp-time').innerText = secLeft;
-        } else {
-            document.getElementById('expedition-bar').style.display = 'none';
-        }
+        if (currentUser.tradeShip) {
+            document.getElementById('ship-bar').style.display = 'block';
+            const secLeft = Math.max(0, Math.ceil((currentUser.tradeShip.finishTime - now) / 1000));
+            document.getElementById('ship-text').innerText = `Корабль вернется через ${secLeft}с с GRC!`;
+        } else document.getElementById('ship-bar').style.display = 'none';
     }, 1000);
 }
 
@@ -96,39 +89,16 @@ function switchTab(tabId) {
 }
 
 async function upgrade(b) { const d = await apiCall({action:'upgrade',username:currentUser.name,building:b}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
+async function repair(b) { const d = await apiCall({action:'repair',username:currentUser.name,building:b}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
 async function recruit(u, a) { const d = await apiCall({action:'recruit',username:currentUser.name,unitType:u,amount:a}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
+async function sendTradeShip() { const d=await apiCall({action:'sendTradeShip',username:currentUser.name}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
+async function sendExpedition() { const d=await apiCall({action:'sendExpedition',username:currentUser.name}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
 
 async function raid() {
     const t = document.getElementById('raid-target').value.trim();
     const d = await apiCall({action:'raid',username:currentUser.name,targetUser:t});
-    if(d.success) { currentUser={name:currentUser.name,...d.user}; document.getElementById('raid-log').innerHTML=`<span style="color:green">Победа! Украдено!</span>`; updateUI(); }
+    if(d.success) { currentUser={name:currentUser.name,...d.user}; document.getElementById('raid-log').innerHTML=`<span style="color:green">Победа!</span>`; updateUI(); }
     else { document.getElementById('raid-log').innerHTML=`<span style="color:red">Провал: ${d.error}</span>`; if(d.user){currentUser={name:currentUser.name,...d.user};updateUI();} }
-}
-
-async function findPvp() {
-    const btn = event.target; btn.disabled = true; btn.innerText = 'Поиск...';
-    const d = await apiCall({action:'findPvp',username:currentUser.name});
-    btn.disabled = false; btn.innerText = 'Найти противника';
-    if(d.status === 'waiting') { document.getElementById('pvp-log').innerHTML = `<span style="color:yellow">Ищем...</span>`; }
-    else if (d.status === 'finished') {
-        currentUser = { name: currentUser.name, ...d.user };
-        if(d.success) { document.getElementById('pvp-log').innerHTML = `<span style="color:green">Победа над ${d.enemyName}!</span>`; }
-        else { document.getElementById('pvp-log').innerHTML = `<span style="color:red">Поражение от ${d.enemyName}!</span>`; }
-        updateUI();
-    } else alert(d.error);
-}
-
-async function sendExpedition() { const d=await apiCall({action:'sendExpedition',username:currentUser.name}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-
-async function gamble() {
-    const r = document.getElementById('gamble-res').value;
-    const a = document.getElementById('gamble-amt').value;
-    const d = await apiCall({action:'gamble',username:currentUser.name,resType:r,resAmount:a});
-    if(d.success) {
-        currentUser = {name:currentUser.name,...d.user}; updateUI();
-        if(d.won) document.getElementById('gamble-log').innerHTML=`<span style="color:green">ДЖЕКПОТ! Вы выиграли GRC!</span>`;
-        else document.getElementById('gamble-log').innerHTML=`<span style="color:red">Не повезло... Ресурсы сгорели.</span>`;
-    } else alert(d.error);
 }
 
 async function placeSellOrder() {
@@ -137,21 +107,18 @@ async function placeSellOrder() {
     if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();loadMarket();}else alert(d.error);
 }
 async function buyOrder(id) { const d=await apiCall({action:'buy',username:currentUser.name,orderId:id}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();loadMarket();}else alert(d.error); }
-async function loadMarket() { const d=await apiCall({action:'getMarket'}); const l=document.getElementById('market-orders');l.innerHTML=''; d.orders.forEach(o=>{const li=document.createElement('li');li.innerHTML=`<span>[${o.resource}] ${o.amount} шт по ${o.pricePerUnit.toFixed(10)} GRC</span><button class="buy-btn" onclick="buyOrder(${o.id})">Купить за ${o.total.toFixed(8)} GRC</button>`;l.appendChild(li);}); }
+async function loadMarket() { const d=await apiCall({action:'getMarket'}); const l=document.getElementById('market-orders');l.innerHTML=''; d.orders.forEach(o=>{const li=document.createElement('li');li.innerHTML=`<span>[${o.resource}] ${o.amount} шт</span><button class="buy-btn" onclick="buyOrder(${o.id})">Купить за ${o.total.toFixed(8)} GRC</button>`;l.appendChild(li);}); }
 
-async function getDepositAddress() {
-    const d = await apiCall({action:'getDepositAddress',username:currentUser.name});
-    if(d.success) {
-        const box = document.getElementById('deposit-address-box');
-        box.style.display = 'block';
-        box.innerText = `Отправьте DOGE на этот адрес (Курс 1 DOGE = 1000 GRC): ${d.address}`;
-    } else alert(d.error);
+async function depositFaucetPay() {
+    const d = await apiCall({action:'getDepositLink',username:currentUser.name});
+    if(d.success) { window.open(d.link, '_blank'); } 
+    else alert(d.error);
 }
 
 async function withdrawFunds() {
     const w=document.getElementById('fp-wallet').value,a=parseFloat(document.getElementById('fp-amount').value);
     const d=await apiCall({action:'withdraw',username:currentUser.name,wallet:w,grcAmount:a});
-    if(d.success){ document.getElementById('withdraw-log').innerHTML=`<span style="color:green">Успешно! Отправлено ${d.dogeSent} DOGE</span>`; currentUser={name:currentUser.name,...d.user}; updateUI(); }
+    if(d.success){ document.getElementById('withdraw-log').innerHTML=`<span style="color:green">Успех! Отправлено ${d.dogeSent} DOGE</span>`; currentUser={name:currentUser.name,...d.user}; updateUI(); }
     else document.getElementById('withdraw-log').innerHTML=`<span style="color:red">${d.error}</span>`;
 }
 
@@ -171,6 +138,13 @@ function renderBuildings() {
     const grid = document.getElementById('buildings-grid'); grid.innerHTML='';
     for (let bId in BUILDING_META) {
         const bMeta = BUILDING_META[bId]; const lvl = currentUser.buildings[bId];
+        if(lvl === 0) continue; // Скрываем здания 0 уровня
+
+        const maxHp = bMeta.baseHp * lvl;
+        const currentHp = currentUser.buildingHp[bId] || maxHp;
+        const hpPercent = (currentHp / maxHp) * 100;
+        const isBroken = hpPercent < 100;
+
         let costString = "Макс"; let nextCostObj = {};
         if (lvl < 20) {
             for(let r in bMeta.baseCost) nextCostObj[r] = Math.floor(bMeta.baseCost[r] * Math.pow(1.5, lvl));
@@ -178,7 +152,13 @@ function renderBuildings() {
         }
         const isBuilding = currentUser.construction && currentUser.construction.building === bId;
         const div = document.createElement('div'); div.className = 'panel';
-        div.innerHTML = `<h3>${bMeta.name} (Ур. ${lvl})</h3><div class="cost-display">${costString}</div>${lvl<20?`<button onclick="upgrade('${bId}')" ${isBuilding?'disabled':''}>${isBuilding?'Строится...':'Улучшить'}</button>`:'<button disabled>Макс</button>'}`;
+        div.innerHTML = `
+            <h3>${bMeta.name} (Ур. ${lvl})</h3>
+            <div class="hp-bar-container"><div class="hp-bar" style="width:${hpPercent}%; background:${hpPercent>50?'#28a745':'#dc3545'}"></div></div>
+            ${isBroken ? `<button onclick="repair('${bId}')" class="btn-danger" style="margin-bottom:5px;">🔧 Ремонт</button>` : ''}
+            <div class="cost-display">${costString}</div>
+            ${lvl<20?`<button onclick="upgrade('${bId}')" ${isBuilding||isBroken?'disabled':''}>${isBuilding?'Строится...':'Улучшить'}</button>`:'<button disabled>Макс</button>'}
+        `;
         grid.appendChild(div);
     }
 }
@@ -189,4 +169,4 @@ function updateResourceDisplay() {
     document.getElementById('res-stone').innerText=Math.floor(currentUser.resources.stone);
     document.getElementById('res-food').innerText=Math.floor(currentUser.resources.food);
     document.getElementById('res-mana').innerText=Math.floor(currentUser.resources.mana);
-                                 }
+        }
