@@ -31,7 +31,10 @@ header { display: flex; justify-content: space-between; align-items: center; bac
 
 .cost-display { font-size: 0.85rem; color: #aaa; min-height: 40px; margin-bottom: 10px; line-height: 1.4; }
 
-ul, ol { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; background: #000; padding: 10px; border-radius: 5px; font-size: 0.9rem; text-align: left; }
+.hp-bar-container { width: 100%; background: #333; border-radius: 3px; margin-bottom: 5px; height: 8px; }
+.hp-bar { height: 100%; border-radius: 3px; }
+
+ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; background: #000; padding: 10px; border-radius: 5px; font-size: 0.9rem; text-align: left; }
 li { background: #252525; padding: 10px; margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; }
 .buy-btn { background: #007bff; width: auto; padding: 5px 15px; margin: 0; }
 
