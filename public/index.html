@@ -7,12 +7,16 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div id="login-screen" class="screen">
         <h1>🏰 Crypto Strategy</h1>
-        <input type="text" id="username-input" placeholder="Введите никнейм">
-        <button onclick="login()">Войти в мир</button>
+        <input type="text" id="username-input" placeholder="Логин">
+        <input type="password" id="password-input" placeholder="Пароль">
+        <button onclick="login()">Войти</button>
+        <button onclick="register()" class="btn-secondary">Зарегистрироваться</button>
     </div>
 
+    <!-- ЭКРАН ИГРЫ -->
     <div id="game-screen" class="screen hidden">
         <header>
             <h2>Игрок: <span id="user-name">Player</span> | Клан: <span id="user-clan">Нет</span></h2>
@@ -20,11 +24,11 @@
         </header>
 
         <div class="res-bar">
-            <span>🪵 <span id="res-wood">0</span> (+<span id="inc-wood">0</span>/с)</span>
-            <span>⛏️ <span id="res-iron">0</span> (+<span id="inc-iron">0</span>/с)</span>
-            <span>🌾 <span id="res-food">0</span> (+<span id="inc-food">0</span>/с)</span>
+            <span>🪵 <span id="res-wood">0</span></span>
+            <span>⛏️ <span id="res-iron">0</span></span>
+            <span>🌾 <span id="res-food">0</span></span>
             <span>🪨 <span id="res-stone">0</span></span>
-            <span>🔮 <span id="res-mana">0</span> (+<span id="inc-mana">0</span>/с)</span>
+            <span>🔮 <span id="res-mana">0</span></span>
         </div>
 
         <nav class="tabs">
@@ -32,21 +36,14 @@
             <button class="tab-btn" onclick="switchTab('military')">Войско & Карта</button>
             <button class="tab-btn" onclick="switchTab('market')">P2P Рынок</button>
             <button class="tab-btn" onclick="switchTab('magic')">Магия & Магазин</button>
-            <button class="tab-btn" onclick="switchTab('social')">Клан & Чат</button>
+            <button class="tab-btn" onclick="switchTab('social')">Соц</button>
             <button class="tab-btn" onclick="switchTab('wallet')">Вывод 💸</button>
         </nav>
 
-        <!-- ВКЛАДКА ГОРОД -->
+        <!-- ВКЛАДКА ГОРОД (С ЦЕНАМИ) -->
         <div id="tab-city" class="tab-content active">
-            <div class="panel-grid">
-                <button onclick="upgrade('woodcutter')">Лесопилка (Ур. <span id="b-woodcutter">0</span>)</button>
-                <button onclick="upgrade('mine')">Шахта (Ур. <span id="b-mine">0</span>)</button>
-                <button onclick="upgrade('farm')">Ферма (Ур. <span id="b-farm">0</span>)</button>
-                <button onclick="upgrade('townhall')">Ратуша (Ур. <span id="b-townhall">1</span>)</button>
-                <button onclick="upgrade('barrack')">Казарма (Ур. <span id="b-barrack">0</span>)</button>
-                <button onclick="upgrade('archery')">Стрельбище (Ур. <span id="b-archery">0</span>)</button>
-                <button onclick="upgrade('stable')">Конюшня (Ур. <span id="b-stable">0</span>)</button>
-                <button onclick="upgrade('tower')">Башня Мага (Ур. <span id="b-tower">0</span>)</button>
+            <div class="panel-grid" id="buildings-grid">
+                <!-- Здания генерируются через JS для удобного обновления цен -->
             </div>
         </div>
 
@@ -68,7 +65,7 @@
                 </div>
             </div>
             <div class="panel">
-                <h3>🗺️ Глобальная Карта (Захват дает бонус к добыче)</h3>
+                <h3>🗺️ Карта Аванпостов (Бонус к добыче)</h3>
                 <div id="map-container" class="map-grid"></div>
             </div>
         </div>
@@ -99,10 +96,9 @@
                     <button onclick="craft('speed_recruit')">Зелье найма x2 (1 час) [80 Маны]</button>
                 </div>
                 <div class="panel">
-                    <h3>👑 Премиум магазин (За GRC)</h3>
-                    <button onclick="buyPremium('vip1')">VIP Статус (Добыча x1.5) [10 GRC]</button>
-                    <button onclick="buyPremium('shield')">Щит от рейдов (24ч) [5 GRC]</button>
-                    <p class="note">Покупка сжигает GRC, поддерживая экономику!</p>
+                    <h3>👑 Премиум (Сжигает GRC!)</h3>
+                    <button onclick="buyPremium('vip1')">VIP Статус (x1.5) [10 GRC]</button>
+                    <button onclick="buyPremium('shield')">Щит от рейдов [5 GRC]</button>
                 </div>
             </div>
         </div>
@@ -116,9 +112,9 @@
                     <button onclick="createClan()">Создать клан</button>
                 </div>
                 <div class="panel">
-                    <h3>💬 Общий чат</h3>
+                    <h3>💬 Чат</h3>
                     <div id="chat-box"></div>
-                    <input type="text" id="chat-input" placeholder="Сообщение...">
+                    <input type="text" id="chat-input" placeholder="Сообщение..." onkeypress="if(event.key==='Enter')sendMessage()">
                     <button onclick="sendMessage()">Отправить</button>
                 </div>
             </div>
@@ -127,15 +123,14 @@
         <!-- ВКЛАДКА ВЫВОД -->
         <div id="tab-wallet" class="tab-content">
             <div class="panel">
-                <h3>💸 Вывод через FaucetPay</h3>
+                <h3>💸 Вывод через FaucetPay (DOGE)</h3>
                 <input type="text" id="fp-wallet" placeholder="Ваш FaucetPay Email/Кошелек">
                 <input type="number" id="fp-amount" placeholder="Сумма (GRC)">
-                <button onclick="withdrawFunds()">Вывести DOGE</button>
-                <p class="note">Комиссия рынка 5%. Валюта вывода: DOGE.</p>
+                <button onclick="withdrawFunds()">Вывести</button>
             </div>
         </div>
     </div>
 
     <script src="script.js"></script>
 </body>
-                </html>
+    </html>
