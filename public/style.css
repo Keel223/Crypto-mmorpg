@@ -1,0 +1,75 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #1a1a2e;
+    color: #eee;
+    margin: 0;
+    padding: 20px;
+}
+.screen {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.hidden { display: none; }
+
+h1, h2, h3 { color: #e94560; }
+
+input, select, button {
+    padding: 10px;
+    margin: 5px 0;
+    border: none;
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+input { background: #16213e; color: white; border: 1px solid #0f3460; }
+button { background: #e94560; color: white; cursor: pointer; font-weight: bold; }
+button:hover { background: #c73652; }
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #16213e;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.balance-box { font-size: 1.2rem; color: #4ecca3; font-weight: bold; }
+
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.panel {
+    background: #16213e;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #0f3460;
+}
+
+.sell-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.sell-form button { grid-column: span 2; }
+
+.btn-gather { background: #0f3460; margin-top: 10px; }
+.btn-gather:hover { background: #1a4a8a; }
+
+ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
+li {
+    background: #1a1a2e;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.buy-btn { background: #4ecca3; color: #1a1a2e; width: auto; padding: 5px 15px; }
+.note { font-size: 0.8rem; color: #aaa; margin-top: 10px; }
