@@ -161,7 +161,7 @@ app.post('/api/action', auth, (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- HTML & CSS (Упрощено для 100% работы на мобилках) ---
+// --- HTML & CSS ---
 const CSS = `
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial; }
 body { background: #000; color: #fff; height: 100vh; display: flex; flex-direction: column; }
@@ -182,11 +182,9 @@ body { background: #000; color: #fff; height: 100vh; display: flex; flex-directi
 .btn { width: 100%; padding: 15px; border: none; border-radius: 5px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 8px; color: white; text-transform: uppercase; background: #333; }
 .btn-g { background: #27ae60; } .btn-b { background: #2980b9; } .btn-p { background: #8e44ad; } .btn-y { background: #f1c40f; color: #000; }
 .input { width: 100%; padding: 12px; background: #111; border: 1px solid #333; color: white; border-radius: 4px; margin-bottom: 8px; font-size: 14px; }
-/* МЕНЮ */
-#myMenu { position: fixed; top: 0; left: -300px; width: 300px; height: 100%; background: #111; z-index: 1000; transition: 0.3s; border-right: 2px solid #333; padding-top: 50px; }
-#myMenu.open { left: 0; }
+/* САМОЕ ПРОСТОЕ МЕНЮ БЕЗ АНИМАЦИИ */
+#myMenu { position: fixed; top: 0; left: 0; width: 300px; height: 100%; background: #111; z-index: 1000; border-right: 2px solid #333; padding-top: 50px; display: none; }
 #menuBg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 999; display: none; }
-#menuBg.open { display: block; }
 .menu-link { display: block; width: 100%; text-align: left; padding: 20px; color: white; background: none; border: none; border-bottom: 1px solid #222; font-size: 16px; cursor: pointer; }
 .menu-link:hover { background: #222; }
 `;
@@ -273,14 +271,14 @@ const r=async(u,b={})=>{
     return res.json();
 };
 
-// Надежное меню
+// ЖЕЛЕЗОБЕТОННОЕ МЕНЮ (без анимаций, просто скрыть/показать)
 function openMenu(){
-    document.getElementById('myMenu').classList.add('open');
-    document.getElementById('menuBg').classList.add('open');
+    document.getElementById('myMenu').style.display = 'block';
+    document.getElementById('menuBg').style.display = 'block';
 }
 function closeMenu(){
-    document.getElementById('myMenu').classList.remove('open');
-    document.getElementById('menuBg').classList.remove('open');
+    document.getElementById('myMenu').style.display = 'none';
+    document.getElementById('menuBg').style.display = 'none';
 }
 function go(p){
     closeMenu(); 
@@ -302,7 +300,6 @@ function updUI(u){
     document.getElementById('hdr').innerText = (u.class==='mage'?'Маг ':'Воин ') + u.username;
     document.getElementById('hdrG').innerText=u.gold;
     
-    // Явное управление полосками HP и XP
     document.getElementById('hpTxt').innerText = '❤️ HP: ' + u.hp + '/' + u.maxHp;
     document.getElementById('hpBar').style.width = (u.hp/u.maxHp)*100 + '%';
     
