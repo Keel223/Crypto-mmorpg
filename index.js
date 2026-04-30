@@ -95,14 +95,16 @@ app.post('/api/action', auth, (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- HTML & CSS ---
 const CSS = `
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial; }
 body { background: #000; color: #fff; height: 100vh; display: flex; flex-direction: column; }
 .header { background: #111; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; }
 .header h1 { font-size: 16px; color: #f1c40f; }
-.hamburger { font-size: 24px; background: none; border: none; color: white; cursor: pointer; z-index: 1001; position: relative; }
+.hamburger { font-size: 24px; background: none; border: none; color: white; cursor: pointer; }
 .gold-hdr { font-size: 16px; color: #f1c40f; }
 .content { flex: 1; overflow-y: auto; padding: 15px; background: #0a0a0a; }
+.page { display: none; } .page.active { display: block; }
 .bar-bg { height: 15px; background: #222; border-radius: 8px; margin-bottom: 15px; overflow: hidden; position: relative; }
 .bar-fill { height: 100%; background: #e74c3c; transition: width 0.3s; }
 .bar-fill.blue { background: #3498db; }
@@ -114,59 +116,37 @@ body { background: #000; color: #fff; height: 100vh; display: flex; flex-directi
 .btn { width: 100%; padding: 15px; border: none; border-radius: 5px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 8px; color: white; text-transform: uppercase; background: #333; }
 .btn-g { background: #27ae60; } .btn-b { background: #2980b9; } .btn-p { background: #8e44ad; } .btn-y { background: #f1c40f; color: #000; }
 .input { width: 100%; padding: 12px; background: #111; border: 1px solid #333; color: white; border-radius: 4px; margin-bottom: 8px; font-size: 14px; }
-
-/* МЕНЮ И СТРАНИЦЫ НА ЧИСТОМ HTML */
-#menuToggle { display: none; }
-.menu-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 999; display: none; }
-.menu-panel { position: fixed; top: 0; left: 0; width: 300px; height: 100%; background: #111; z-index: 1000; border-right: 2px solid #333; padding-top: 60px; display: none; }
+/* МЕНЮ */
+#menuBg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 999; display: none; }
+#myMenu { position: fixed; top: 0; left: 0; width: 300px; height: 100%; background: #111; z-index: 1000; border-right: 2px solid #333; padding-top: 60px; display: none; }
 .menu-link { display: block; width: 100%; text-align: left; padding: 20px; color: white; background: none; border: none; border-bottom: 1px solid #222; font-size: 16px; cursor: pointer; }
 .menu-link:hover { background: #222; }
-
-#menuToggle:checked ~ .menu-bg { display: block; }
-#menuToggle:checked ~ .menu-panel { display: block; }
-
-.page-selector { display: none; } /* Прячем радиокнопки */
-.page { display: none; }
-#pg-prof:checked ~ .content #pg-prof-c { display: block; }
-#pg-map:checked ~ .content #pg-map-c { display: block; }
-#pg-battle:checked ~ .content #pg-battle-c { display: block; }
-#pg-inv:checked ~ .content #pg-inv-c { display: block; }
-#pg-mkt:checked ~ .content #pg-mkt-c { display: block; }
-#pg-wallet:checked ~ .content #pg-wallet-c { display: block; }
 `;
 
 const PAGE_AUTH = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auth</title><style>${CSS}body{justify-content:center;padding:20px}.box{width:100%;max-width:320px}.box h1{text-align:center;margin-bottom:20px;font-size:20px}.err{color:red;font-size:12px;text-align:center;margin-bottom:10px;display:none}</style></head><body><div class="box"><h1>CRYPTO MMO</h1><div id="err" class="err"></div><input class="input" id="user" placeholder="Логин"><input class="input" type="password" id="pass" placeholder="Пароль"><select class="input" id="cls"><option value="warrior">Воин</option><option value="mage">Маг</option></select><button class="btn btn-y" onclick="reg()">СОЗДАТЬ</button><button class="btn" onclick="log()">ВХОД</button></div><script>const r=(u,b={})=>fetch('/api/'+u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());const e=m=>{let el=document.getElementById('err');el.innerText=m;el.style.display='block';};async function reg(){let d=await r('register',{username:document.getElementById('user').value,password:document.getElementById('pass').value,pClass:document.getElementById('cls').value});if(d.error)return e(d.error);localStorage.setItem('tk',d.token);location.reload();}async function log(){let d=await r('login',{username:document.getElementById('user').value,password:document.getElementById('pass').value});if(d.error)return e(d.error);localStorage.setItem('tk',d.token);location.reload();}</script></body></html>`;
 
+// ВНИМАНИЕ: Внутри HTML добавлен скрипт проверки версии
 const PAGE_GAME = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>MMO</title><style>${CSS}</style></head><body>
 
-<!-- УПРАВЛЕНИЕ МЕНЮ И СТРАНИЦАМИ ЧЕРЕЗ HTML (РАБОТАЕТ БЕЗ JS) -->
-<input type="checkbox" id="menuToggle">
-<input type="radio" name="pages" id="pg-prof" class="page-selector" checked>
-<input type="radio" name="pages" id="pg-map" class="page-selector">
-<input type="radio" name="pages" id="pg-battle" class="page-selector">
-<input type="radio" name="pages" id="pg-inv" class="page-selector">
-<input type="radio" name="pages" id="pg-mkt" class="page-selector">
-<input type="radio" name="pages" id="pg-wallet" class="page-selector">
-
-<div class="menu-bg" onclick="document.getElementById('menuToggle').checked=false"></div>
-<div class="menu-panel">
-    <label for="pg-prof" class="menu-link" onclick="document.getElementById('menuToggle').checked=false">👤 Профиль</label>
-    <label for="pg-map" class="menu-link" onclick="document.getElementById('menuToggle').checked=false">🗺️ Охота</label>
-    <label for="pg-battle" class="menu-link" onclick="document.getElementById('menuToggle').checked=false">⚔️ Бой</label>
-    <label for="pg-inv" class="menu-link" onclick="document.getElementById('menuToggle').checked=false">🎒 Инвентарь</label>
-    <label for="pg-mkt" class="menu-link" onclick="document.getElementById('menuToggle').checked=false">🏦 Рынок</label>
-    <label for="pg-wallet" class="menu-link" onclick="document.getElementById('menuToggle').checked=false">💰 Кошелек</label>
+<div id="menuBg"></div>
+<div id="myMenu">
+    <button class="menu-link" data-page="prof">👤 Профиль</button>
+    <button class="menu-link" data-page="map">🗺️ Охота</button>
+    <button class="menu-link" data-page="battle">⚔️ Бой</button>
+    <button class="menu-link" data-page="inv">🎒 Инвентарь</button>
+    <button class="menu-link" data-page="mkt">🏦 Рынок</button>
+    <button class="menu-link" data-page="wallet">💰 Кошелек</button>
     <button class="menu-link" style="color:red; margin-top:50px;" onclick="location.href='/logout'">🚪 Выйти</button>
 </div>
 
 <div class="header">
-    <label for="menuToggle" class="hamburger">☰</label>
+    <button class="hamburger" id="menuBtn">☰</button>
     <h1 id="hdr">CRYPTO MMO</h1>
     <div class="gold-hdr">💰 <span id="hdrG">0</span></div>
 </div>
 
 <div class="content">
-    <div id="pg-prof-c">
+    <div id="pg-prof" class="page active">
         <div class="bar-bg"><div class="bar-fill" id="hpBar" style="width:0%"></div><div class="bar-text" id="hpTxt">0/0</div></div>
         <div class="bar-bg"><div class="bar-fill blue" id="xpBar" style="width:0%"></div><div class="bar-text" id="xpTxt">0/0</div></div>
         <div class="card"><h3>⚔️ Оружие</h3><span id="eqW" style="color:#888">Пусто</span></div>
@@ -174,14 +154,14 @@ const PAGE_GAME = `<!DOCTYPE html><html><head><meta name="viewport" content="wid
         <div class="card"><h3>📊 Характеристики</h3>Урон: <span id="stD" style="color:#f1c40f">0</span> | Защита: <span id="stF" style="color:#f1c40f">0</span> | Ур: <span id="stL" style="color:#f1c40f">0</span></div>
     </div>
 
-    <div id="pg-map-c">
+    <div id="pg-map" class="page">
         <div class="log-box" id="mapLog">Выберите локацию для поиска врагов.</div>
         <button class="btn btn-g" onclick="explore('forest')">🌲 Идти в Тёмный Лес</button>
         <button class="btn btn-p" onclick="explore('dungeon')">💀 Идти в Пещеру</button>
         <button class="btn" style="background:#2c3e50" onclick="goShop()">🧪 Магазин Зелий</button>
     </div>
 
-    <div id="pg-battle-c">
+    <div id="pg-battle" class="page">
         <div class="log-box" id="batLog">Ожидание...</div>
         <div style="background:#111;padding:10px;border-radius:5px;margin-bottom:15px;text-align:center">
             <span style="color:#aaa">ВРАГ:</span> <span id="mobN" style="color:red;font-weight:bold">???</span>
@@ -195,10 +175,10 @@ const PAGE_GAME = `<!DOCTYPE html><html><head><meta name="viewport" content="wid
         </div>
     </div>
 
-    <div id="pg-inv-c"><div id="invC"></div></div>
-    <div id="pg-mkt-c"><h3 style="margin-bottom:10px;color:#f1c40f">P2P РЫНОК</h3><div id="mktC"></div></div>
+    <div id="pg-inv" class="page"><div id="invC"></div></div>
+    <div id="pg-mkt" class="page"><h3 style="margin-bottom:10px;color:#f1c40f">P2P РЫНОК</h3><div id="mktC"></div></div>
 
-    <div id="pg-wallet-c">
+    <div id="pg-wallet" class="page">
         <div class="card" style="text-align:center">
             <h3>Привязка FaucetPay</h3>
             <small>Укажите email для вывода</small>
@@ -217,72 +197,104 @@ const PAGE_GAME = `<!DOCTYPE html><html><head><meta name="viewport" content="wid
 </div>
 
 <script>
-let tk=localStorage.getItem('tk');
-let battleInterval=null;
+// АНТИКЭШ: Принудительно загружаем свежий код при обновлениях
+(function() {
+    const v = '1.0.5';
+    if (localStorage.getItem('game_v') !== v) {
+        localStorage.setItem('game_v', v);
+        location.reload(true); // true - жесткая перезагрузка без кэша
+    }
+})();
 
-const r=async(u,b={})=>{
-    let res=await fetch('/api/'+u,{method:'POST',headers:{'Content-Type':'application/json','Authorization':tk},body:JSON.stringify(b)}); 
-    if(res.status===401){location.href='/auth';return null;} 
+let tk = localStorage.getItem('tk');
+let battleInterval = null;
+
+// API
+const r = async (u, b = {}) => {
+    let res = await fetch('/api/' + u, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': tk }, body: JSON.stringify(b) });
+    if (res.status === 401) { location.href = '/auth'; return null; }
     return res.json();
 };
 
-// Функция для переключения страниц (если нужно вызвать из JS, например, после боя)
-function switchPage(pageName) {
-    document.getElementById(pageName).checked = true;
-    if(pageName === 'pg-inv') renderInv();
-    if(pageName === 'pg-mkt') renderMkt();
-    if(pageName === 'pg-wallet') renderWallet();
+// МЕНЮ
+const menuBtn = document.getElementById('menuBtn');
+const menuBg = document.getElementById('menuBg');
+const myMenu = document.getElementById('myMenu');
+
+menuBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    myMenu.style.display = 'block';
+    menuBg.style.display = 'block';
+});
+
+menuBg.addEventListener('click', function() {
+    myMenu.style.display = 'none';
+    menuBg.style.display = 'none';
+});
+
+// НАВИГАЦИЯ ПО СТРАНИЦАМ
+document.querySelectorAll('.menu-link[data-page]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        let page = this.getAttribute('data-page');
+        go(page);
+    });
+});
+
+function go(p) {
+    myMenu.style.display = 'none';
+    menuBg.style.display = 'none';
+    document.querySelectorAll('.page').forEach(function(e) { e.classList.remove('active'); });
+    document.getElementById('pg-' + p).classList.add('active');
+    if (p === 'inv') renderInv();
+    if (p === 'mkt') renderMkt();
+    if (p === 'wallet') renderWallet();
 }
 
 window.onload = async function() {
-    document.getElementById('hdr').innerText = "Подключение...";
+    document.getElementById('hdr').innerText = "Загрузка...";
     let d = await r('sync');
-    if(d) updUI(d.user);
+    if (d) updUI(d.user);
 };
 
-function updUI(u){
-    if(!u) return;
-    document.getElementById('hdr').innerText = (u.class==='mage'?'Маг ':'Воин ') + u.username;
-    document.getElementById('hdrG').innerText=u.gold;
-    
-    document.getElementById('hpTxt').innerText = '❤️ HP: ' + u.hp + '/' + u.maxHp;
-    document.getElementById('hpBar').style.width = (u.hp/u.maxHp)*100 + '%';
-    
+function updUI(u) {
+    if (!u) return;
+    document.getElementById('hdr').innerText = (u.class === 'mage' ? 'Маг ' : 'Воин ') + u.username;
+    document.getElementById('hdrG').innerText = u.gold;
+    document.getElementById('hpTxt').innerText = 'HP: ' + u.hp + '/' + u.maxHp;
+    document.getElementById('hpBar').style.width = (u.hp / u.maxHp) * 100 + '%';
     let xN = u.level * 150;
-    document.getElementById('xpTxt').innerText = '⭐ XP: ' + u.xp + '/' + xN;
-    document.getElementById('xpBar').style.width = (u.xp/xN)*100 + '%';
-
-    let dm=u.baseDmg,df=u.baseDef;
-    const w=u.inventory.find(i=>i.id===u.equippedWeapon);if(w){dm+=w.power;document.getElementById('eqW').innerHTML=w.name+' <span style="color:#f1c40f">(+'+w.power+')</span>';}else document.getElementById('eqW').innerText="Пусто";
-    const a=u.inventory.find(i=>i.id===u.equippedArmor);if(a){df+=a.power;document.getElementById('eqA').innerHTML=a.name+' <span style="color:#f1c40f">(+'+a.power+')</span>';}else document.getElementById('eqA').innerText="Пусто";
-    document.getElementById('stD').innerText=dm;document.getElementById('stF').innerText=df;document.getElementById('stL').innerText=u.level;
-    
-    if(u.inBattle&&u.battleState){
-        document.getElementById('mobN').innerText=u.battleState.mob;
-        document.getElementById('mobHB').style.width=Math.max(0,(u.battleState.currentHp/u.battleState.hp)*100)+'%';
-        if(!battleInterval)startBattleLoop();
+    document.getElementById('xpTxt').innerText = 'XP: ' + u.xp + '/' + xN;
+    document.getElementById('xpBar').style.width = (u.xp / xN) * 100 + '%';
+    let dm = u.baseDmg, df = u.baseDef;
+    const w = u.inventory.find(i => i.id === u.equippedWeapon); if (w) { dm += w.power; document.getElementById('eqW').innerHTML = w.name + ' <span style="color:#f1c40f">(+' + w.power + ')</span>'; } else document.getElementById('eqW').innerText = "Пусто";
+    const a = u.inventory.find(i => i.id === u.equippedArmor); if (a) { df += a.power; document.getElementById('eqA').innerHTML = a.name + ' <span style="color:#f1c40f">(+' + a.power + ')</span>'; } else document.getElementById('eqA').innerText = "Пусто";
+    document.getElementById('stD').innerText = dm; document.getElementById('stF').innerText = df; document.getElementById('stL').innerText = u.level;
+    if (u.inBattle && u.battleState) {
+        document.getElementById('mobN').innerText = u.battleState.mob;
+        document.getElementById('mobHB').style.width = Math.max(0, (u.battleState.currentHp / u.battleState.hp) * 100) + '%';
+        if (!battleInterval) startBattleLoop();
     }
 }
 
-function renderWallet(){r('sync').then(d=>{if(d){document.getElementById('currentEmail').innerText = d.user.fpEmail || "Нет";document.getElementById('fpEmailInput').value = d.user.fpEmail || "";}});}
-async function linkEmail(){let email = document.getElementById('fpEmailInput').value;if(!email || !email.includes('@')) return alert("Введите email");let d = await r('action', {type:'link_email', payload:email});if(d){ alert(d.log); updUI(d.user); renderWallet();}}
-async function explore(loc){let d=await r('action',{type:'explore',payload:loc});if(d){document.getElementById('mapLog').innerHTML=d.log;updUI(d.user);if(d.user.inBattle)switchPage('pg-battle');}}
-function startBattleLoop(){battleInterval=setInterval(async()=>{let d=await r('sync');if(!d||!d.user.inBattle){clearInterval(battleInterval);battleInterval=null;document.getElementById('batBtns').innerHTML='<button class="btn" style="background:#333">БОЙ ОКОНЧЕН</button>';updUI(d.user);return;}updUI(d.user);},1000);}
-async function turn(act){let d=await r('action',{type:'battle_turn',payload:act});if(!d)return;document.getElementById('batLog').innerHTML+=d.log+'<br>';document.getElementById('batLog').scrollTop=9999;updUI(d.user);if(d.battleEnded){clearInterval(battleInterval);battleInterval=null;document.getElementById('batBtns').innerHTML='<button class="btn btn-y" onclick="switchPage(\'pg-map\')">ВЕРНУТЬСЯ НА КАРТУ</button>';}}
-async function useFlask(){let d=await r('action',{type:'use_flask'});if(d){document.getElementById('batLog').innerHTML+=d.log+'<br>';updUI(d.user);}}
-async function goShop(){let p=prompt("1. Малое (20💰)\\n2. Большое (50💰)");if(!p)return;let d=await r('action',{type:'shop',payload:parseInt(p)-1});if(d){document.getElementById('mapLog').innerHTML+="<br>"+d.log;updUI(d.user);}}
-function renderInv(){r('sync').then(d=>{if(!d)return;let el=document.getElementById('invC');if(!d.user.inventory.length){el.innerHTML='<div class="card" style="text-align:center;color:#666">Пусто</div>';return;}el.innerHTML=d.user.inventory.map(i=>{let s=i.type==='weapon'?'Урон: +'+i.power:i.type==='armor'?'Защита: +'+i.power:'Лечение: +'+i.heal;let b=i.type==='potion'?'':'<button class="btn btn-y" onclick="eqItem('+i.id+')">ЭКИПИРОВАТЬ</button>';if(i.type!=='potion')b+='<button class="btn" style="margin-top:5px" onclick="sellItem('+i.id+')">ВЫСТАВИТЬ НА P2P</button>';return '<div class="card"><h3>'+i.name+'</h3><small>'+s+'</small>'+b+'</div>';}).join('');});}
-async function eqItem(id){let d=await r('action',{type:'equip',payload:id});if(d){updUI(d.user);renderInv();}}
-async function sellItem(id){let p=prompt("Цена в 💰:");if(!p)return;let d=await r('action',{type:'sell',payload:{id,price:p}});if(d){updUI(d.user);renderInv();}}
-function renderMkt(){r('sync').then(d=>{if(!d)return;let el=document.getElementById('mktC');if(!d.market.length){el.innerHTML='<div class="card" style="text-align:center;color:#666">Рынок пуст</div>';return;}el.innerHTML=d.market.map(m=>{let s=m.item.type==='weapon'?'Урон: +'+m.item.power:'Защита: +'+m.item.power;return '<div class="card"><h3>'+m.item.name+'</h3><small>'+s+' | '+m.seller+'</small><div style="font-size:18px;color:#f1c40f;margin:10px 0">'+m.price+' 💰</div><button class="btn btn-g" onclick="buyItem('+m.id+')">КУПИТЬ</button></div>';}).join('');});}
-async function buyItem(id){let d=await r('action',{type:'buy',payload:id});if(d){alert(d.log);updUI(d.user);renderMkt();}}
-async function wd(){let d=await r('action',{type:'withdraw',payload:{amount:document.getElementById('wdAmount').value}});if(d) alert(d.log);updUI(d.user);}
+function renderWallet() { r('sync').then(d => { if (d) { document.getElementById('currentEmail').innerText = d.user.fpEmail || "Нет"; document.getElementById('fpEmailInput').value = d.user.fpEmail || ""; } }); }
+async function linkEmail() { let email = document.getElementById('fpEmailInput').value; if (!email || !email.includes('@')) return alert("Введите email"); let d = await r('action', { type: 'link_email', payload: email }); if (d) { alert(d.log); updUI(d.user); renderWallet(); } }
+async function explore(loc) { let d = await r('action', { type: 'explore', payload: loc }); if (d) { document.getElementById('mapLog').innerHTML = d.log; updUI(d.user); if (d.user.inBattle) go('battle'); } }
+function startBattleLoop() { battleInterval = setInterval(async () => { let d = await r('sync'); if (!d || !d.user.inBattle) { clearInterval(battleInterval); battleInterval = null; document.getElementById('batBtns').innerHTML = '<button class="btn" style="background:#333">БОЙ ОКОНЧЕН</button>'; updUI(d.user); return; } updUI(d.user); }, 1000); }
+async function turn(act) { let d = await r('action', { type: 'battle_turn', payload: act }); if (!d) return; document.getElementById('batLog').innerHTML += d.log + '<br>'; document.getElementById('batLog').scrollTop = 9999; updUI(d.user); if (d.battleEnded) { clearInterval(battleInterval); battleInterval = null; document.getElementById('batBtns').innerHTML = '<button class="btn btn-y" onclick="go(\'map\')">ВЕРНУТЬСЯ НА КАРТУ</button>'; } }
+async function useFlask() { let d = await r('action', { type: 'use_flask' }); if (d) { document.getElementById('batLog').innerHTML += d.log + '<br>'; updUI(d.user); } }
+async function goShop() { let p = prompt("1. Малое (20💰)\\n2. Большое (50💰)"); if (!p) return; let d = await r('action', { type: 'shop', payload: parseInt(p) - 1 }); if (d) { document.getElementById('mapLog').innerHTML += "<br>" + d.log; updUI(d.user); } }
+function renderInv() { r('sync').then(d => { if (!d) return; let el = document.getElementById('invC'); if (!d.user.inventory.length) { el.innerHTML = '<div class="card" style="text-align:center;color:#666">Пусто</div>'; return; } el.innerHTML = d.user.inventory.map(i => { let s = i.type === 'weapon' ? 'Урон: +' + i.power : i.type === 'armor' ? 'Защита: +' + i.power : 'Лечение: +' + i.heal; let b = i.type === 'potion' ? '' : '<button class="btn btn-y" onclick="eqItem(' + i.id + ')">ЭКИПИРОВАТЬ</button>'; if (i.type !== 'potion') b += '<button class="btn" style="margin-top:5px" onclick="sellItem(' + i.id + ')">ВЫСТАВИТЬ НА P2P</button>'; return '<div class="card"><h3>' + i.name + '</h3><small>' + s + '</small>' + b + '</div>'; }).join(''); }); }
+async function eqItem(id) { let d = await r('action', { type: 'equip', payload: id }); if (d) { updUI(d.user); renderInv(); } }
+async function sellItem(id) { let p = prompt("Цена в 💰:"); if (!p) return; let d = await r('action', { type: 'sell', payload: { id, price: p } }); if (d) { updUI(d.user); renderInv(); } }
+function renderMkt() { r('sync').then(d => { if (!d) return; let el = document.getElementById('mktC'); if (!d.market.length) { el.innerHTML = '<div class="card" style="text-align:center;color:#666">Рынок пуст</div>'; return; } el.innerHTML = d.market.map(m => { let s = m.item.type === 'weapon' ? 'Урон: +' + m.item.power : 'Защита: +' + m.item.power; return '<div class="card"><h3>' + m.item.name + '</h3><small>' + s + ' | ' + m.seller + '</small><div style="font-size:18px;color:#f1c40f;margin:10px 0">' + m.price + ' 💰</div><button class="btn btn-g" onclick="buyItem(' + m.id + ')">КУПИТЬ</button></div>'; }).join(''); }); }
+async function buyItem(id) { let d = await r('action', { type: 'buy', payload: id }); if (d) { alert(d.log); updUI(d.user); renderMkt(); } }
+async function wd() { let d = await r('action', { type: 'withdraw', payload: { amount: document.getElementById('wdAmount').value } }); if (d) alert(d.log); updUI(d.user); }
 </script>
 </body></html>`;
 
-app.get('/', (req, res) => res.redirect('/auth?v=3'));
+app.get('/', (req, res) => res.redirect('/auth'));
 app.get('/auth', (req, res) => res.send(PAGE_AUTH));
 app.get('/game', (req, res) => res.send(PAGE_GAME));
-app.get('/logout', (req, res) => res.send(`<!DOCTYPE html><html><head><script>localStorage.removeItem('tk');location.href='/auth?v=3';</script></head></html>`));
+app.get('/logout', (req, res) => res.send(`<!DOCTYPE html><html><head><script>localStorage.clear();location.href='/auth';</script></head></html>`));
 
 export default app;
