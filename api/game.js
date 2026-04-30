@@ -6,7 +6,7 @@ const path = require('path');
 const DB_PATH = path.join('/tmp', 'db.json');
 
 // КОНФИГ FAUCETPAY (Внесите свои ключи)
-const FP_API_KEY = 'ВАШ_API_КЛЮЧ';
+const FP_API_KEY = '6093864477e0ad75814f955d6d382665829b1912072310cbfcd17f6a499b77c9';
 const FP_CURRENCY = 'DOGE';
 const MARKET_FEE = 0.05; // 5% комиссия рынка
 
