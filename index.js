@@ -31,8 +31,7 @@ app.post('/api/register', (req, res) => {
             passwordHash: crypto.createHash('sha256').update(password).digest('hex'), 
             class: pClass || 'warrior', xp: 0, level: 1, hp: stats.maxHp, maxHp: stats.maxHp, 
             baseDmg: stats.baseDmg, baseDef: stats.baseDef, gold: 50, inventory: [], 
-            equippedWeapon: null, equippedArmor: null, inBattle: false, battleState: null,
-            fpEmail: "" // Сохраняем email
+            equippedWeapon: null, equippedArmor: null, inBattle: false, battleState: null, fpEmail: ""
         };
         const token = crypto.randomUUID(); TOKENS.set(token, username);
         res.json({ success: true, token, user: safe(db.users[username]) });
@@ -43,8 +42,7 @@ app.post('/api/login', (req, res) => {
     try {
         const { username, password } = req.body;
         const user = db.users[username];
-        const hash = crypto.createHash('sha256').update(password).digest('hex');
-        if (!user || user.passwordHash !== hash) return res.json({ error: "Неверный логин/пароль" });
+        if (!user || user.passwordHash !== crypto.createHash('sha256').update(password).digest('hex')) return res.json({ error: "Неверный логин/пароль" });
         const token = crypto.randomUUID(); TOKENS.set(token, username);
         res.json({ success: true, token, user: safe(user) });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -105,8 +103,7 @@ app.post('/api/action', auth, (req, res) => {
             if (user.hp <= 0) {
                 user.hp = 0; user.inBattle = false; user.battleState = null;
                 let lost = Math.floor(user.gold * 0.2); user.gold -= lost;
-                log.push(`<span style="color:red">💀 ПОГИБЛИ. -${lost}💰</span>`);
-                user.hp = 1; 
+                log.push(`<span style="color:red">💀 ПОГИБЛИ. -${lost}💰</span>`); user.hp = 1; 
                 return res.json({ log: log.join('<br>'), user: safe(user), battleEnded: true });
             }
             return res.json({ log: log.join('<br>'), user: safe(user) });
@@ -151,20 +148,16 @@ app.post('/api/action', auth, (req, res) => {
             return res.json({ log: `Куплено!`, user: safe(user) });
         }
 
-        if (type === 'link_email') {
-            user.fpEmail = payload;
-            return res.json({ log: "Email привязан!", user: safe(user) });
-        }
+        if (type === 'link_email') { user.fpEmail = payload; return res.json({ log: "Email привязан!", user: safe(user) }); }
 
         if (type === 'withdraw') {
-            if (!user.fpEmail) return res.json({ log: "Сначала привяжите Email в меню Кошелек!", user: safe(user) });
+            if (!user.fpEmail) return res.json({ log: "Сначала привяжите Email!", user: safe(user) });
             const amount = parseInt(payload.amount);
             if (user.gold < amount || amount < 1000) return res.json({ log: "Мало золота (мин 1000)", user: safe(user) });
             let fee = Math.floor(amount * 0.10); let usdt = ((amount - fee) / EX_RATE).toFixed(2);
             user.gold -= amount; 
-            return res.json({ log: `Запрос на вывод ${usdt} USDT на ${user.fpEmail} создан!`, user: safe(user) });
+            return res.json({ log: `Запрос на ${usdt} USDT на ${user.fpEmail} создан!`, user: safe(user) });
         }
-
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -188,12 +181,10 @@ body{background:var(--bg);color:var(--t);height:100vh;display:flex;flex-directio
 .btn{width:100%;padding:14px;border:none;border-radius:6px;font-weight:bold;font-size:14px;cursor:pointer;margin-bottom:8px;color:white;text-transform:uppercase}
 .btn-atk{background:#27ae60}.btn-def{background:#2980b9}.btn-flask{background:#8e44ad}.btn-flee{background:#555}.btn-sell{background:var(--y);color:#000}
 .input{width:100%;padding:12px;background:#111;border:1px solid var(--b);color:white;border-radius:4px;margin-bottom:8px;font-size:14px}
-
-/* Боковое меню */
-.sidebar-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:40;opacity:0;visibility:hidden;transition:opacity 0.3s}
-.sidebar-overlay.active{opacity:1;visibility:visible}
+/* МЕНЮ */
+.sidebar-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:40;display:none}
 .sidebar{position:fixed;top:0;left:-300px;width:280px;height:100%;background:var(--p);z-index:50;transition:left 0.3s;padding-top:50px;border-right:1px solid var(--b)}
-.sidebar.active{left:0}
+.sidebar.open{left:0}
 .sidebar a,.sidebar button{display:block;width:100%;text-align:left;padding:15px 20px;color:white;background:none;border:none;font-size:16px;cursor:pointer;text-decoration:none;border-bottom:1px solid var(--b)}
 .sidebar a:hover,.sidebar button:hover{background:#222}
 `;
@@ -202,26 +193,24 @@ const PAGE_AUTH = `<!DOCTYPE html><html><head><meta name="viewport" content="wid
 
 const PAGE_GAME = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>MMO</title><style>${CSS}</style></head><body>
 
-<!-- Бургер меню -->
-<div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
+<div class="sidebar-overlay" id="overlay" onclick="closeMenu()"></div>
 <div class="sidebar" id="sidebar">
     <a href="#" onclick="go('prof')">👤 Профиль</a>
     <a href="#" onclick="go('map')">🗺️ Карта и Охота</a>
     <a href="#" onclick="go('battle')">⚔️ Бой</a>
     <a href="#" onclick="go('inv')">🎒 Инвентарь</a>
     <a href="#" onclick="go('mkt')">🏦 P2P Рынок</a>
-    <a href="#" onclick="go('wallet')">💰 Кошелек (Вывод)</a>
+    <a href="#" onclick="go('wallet')">💰 Кошелек</a>
     <button style="color:var(--r); margin-top:50px;" onclick="location.href='/logout'">🚪 Выйти</button>
 </div>
 
 <div class="header">
-    <button class="hamburger" onclick="toggleMenu()">☰</button>
-    <h1 id="hdr">LOADING...</h1>
+    <button class="hamburger" onclick="openMenu()">☰</button>
+    <h1 id="hdr">CRYPTO MMO</h1>
     <div class="gold-display">💰 <span id="hdrG">0</span></div>
 </div>
 
 <div class="content">
-    <!-- Профиль -->
     <div id="pg-prof" class="page active">
         <div class="stat-row"><span>❤️ HP</span><span id="hpT">0/0</span></div><div class="bar"><div class="bar-fill hp" id="hpB" style="width:0%"></div></div>
         <div class="stat-row"><span>⭐ XP</span><span id="xpT">0/0</span></div><div class="bar"><div class="bar-fill xp" id="xpB" style="width:0%"></div></div>
@@ -230,17 +219,15 @@ const PAGE_GAME = `<!DOCTYPE html><html><head><meta name="viewport" content="wid
         <div class="card"><h3>📊 Статы</h3>Урон: <span id="stD" style="color:var(--g)">0</span> | Защита: <span id="stF" style="color:var(--g)">0</span> | Ур: <span id="stL" style="color:var(--g)">0</span></div>
     </div>
 
-    <!-- Карта -->
     <div id="pg-map" class="page">
-        <div class="log-box" id="mapLog">Выберите локацию для поиска врагов.</div>
-        <button class="btn" style="background:#27ae60" onclick="explore('forest')">🌲 Идти в Тёмный Лес</button>
-        <button class="btn" style="background:#8e44ad" onclick="explore('dungeon')">💀 Идти в Пещеру</button>
+        <div class="log-box" id="mapLog">Выберите локацию.</div>
+        <button class="btn" style="background:#27ae60" onclick="explore('forest')">🌲 Тёмный Лес</button>
+        <button class="btn" style="background:#8e44ad" onclick="explore('dungeon')">💀 Пещера</button>
         <button class="btn" style="background:#2c3e50" onclick="goShop()">🧪 Магазин Зелий</button>
     </div>
 
-    <!-- Бой -->
     <div id="pg-battle" class="page">
-        <div class="log-box" id="batLog">Ожидание противника...</div>
+        <div class="log-box" id="batLog">Ожидание...</div>
         <div style="background:#111;padding:10px;border-radius:6px;margin-bottom:15px;text-align:center">
             <span style="color:#aaa">ВРАГ:</span> <span id="mobN" style="color:var(--r);font-weight:bold">???</span>
             <div style="margin-top:5px"><div class="bar" style="margin:0"><div class="bar-fill hp" id="mobHB" style="width:100%"></div></div></div>
@@ -253,33 +240,23 @@ const PAGE_GAME = `<!DOCTYPE html><html><head><meta name="viewport" content="wid
         </div>
     </div>
 
-    <!-- Инвентарь -->
     <div id="pg-inv" class="page"><div id="invC"></div></div>
+    <div id="pg-mkt" class="page"><h3 style="margin-bottom:10px;color:var(--g)">P2P РЫНОК</h3><div id="mktC"></div></div>
 
-    <!-- Рынок -->
-    <div id="pg-mkt" class="page"><h3 style="margin-bottom:10px;color:var(--g)">P2P РЫНОК (Комиссия 5%)</h3><div id="mktC"></div></div>
-
-    <!-- Кошелек -->
     <div id="pg-wallet" class="page">
         <div class="card" style="text-align:center">
             <h3>Привязка FaucetPay</h3>
-            <small>Укажите ваш email FaucetPay, чтобы выводить золото</small>
+            <small>Укажите email для вывода</small>
             <div style="margin-top:10px">
                 <input class="input" type="email" id="fpEmailInput" placeholder="email@faucetpay.com">
-                <button class="btn" style="background:var(--bl)" onclick="linkEmail()">🔒 ПРИВЯЗАТЬ EMAIL</button>
+                <button class="btn" style="background:var(--bl)" onclick="linkEmail()">🔒 ПРИВЯЗАТЬ</button>
             </div>
-            <div style="margin-top:15px; font-size:14px;">
-                Текущий Email: <span id="currentEmail" style="color:var(--g)">Не привязан</span>
-            </div>
+            <div style="margin-top:15px; font-size:14px;">Текущий: <span id="currentEmail" style="color:var(--g)">Нет</span></div>
         </div>
-        
-        <h3 style="margin:20px 0 10px;color:var(--g)">ВЫВОД СРЕДСТВ (1USDT = 1000💰)</h3>
+        <h3 style="margin:20px 0 10px;color:var(--g)">ВЫВОД (1USDT = 1000💰)</h3>
         <div class="card">
-            <small>Комиссия за вывод: 10%</small>
-            <div style="margin-top:10px">
-                <input class="input" type="number" id="wdAmount" placeholder="Сколько золота вывести (мин 1000)">
-                <button class="btn" style="background:var(--g); color:#000" onclick="wd()">💸 ЗАПРОСИТЬ ВЫПЛАТУ В USDT</button>
-            </div>
+            <input class="input" type="number" id="wdAmount" placeholder="Сумма золота (мин 1000)">
+            <button class="btn" style="background:var(--g); color:#000" onclick="wd()">💸 ВЫВЕСТИ USDT</button>
         </div>
     </div>
 </div>
@@ -294,13 +271,17 @@ const r=async(u,b={})=>{
     return res.json();
 };
 
-function toggleMenu(){
-    document.getElementById('sidebar').classList.toggle('active');
-    document.getElementById('overlay').classList.toggle('active');
+// ИСПРАВЛЕННОЕ МЕНЮ
+function openMenu(){
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('overlay').style.display='block';
 }
-
+function closeMenu(){
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').style.display='none';
+}
 function go(p){
-    toggleMenu(); // Закрываем меню при клике
+    closeMenu(); // Сначала закрываем меню
     document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
     document.getElementById('pg-'+p).classList.add('active');
     if(p==='inv')renderInv();
@@ -308,14 +289,19 @@ function go(p){
     if(p==='wallet')renderWallet();
 }
 
-async function init(){
-    let d=await r('sync');
+// ИСПРАВЛЕННАЯ ЗАГРУЗКА
+window.onload = async function() {
+    // Сразу рисуем интерфейс, не ждя сервер
+    document.getElementById('hdr').innerText = "Загрузка данных...";
+    
+    // Потом грузим данные
+    let d = await r('sync');
     if(d) updUI(d.user);
-}
+};
 
 function updUI(u){
-    if(!u)return;
-    document.getElementById('hdr').innerText=u.class==='mage'?'Маг '+u.username:'Воин '+u.username;
+    if(!u) return;
+    document.getElementById('hdr').innerText = (u.class==='mage'?'Маг ':'Воин ') + u.username;
     document.getElementById('hdrG').innerText=u.gold;
     document.getElementById('hpT').innerText=u.hp+'/'+u.maxHp;document.getElementById('hpB').style.width=(u.hp/u.maxHp)*100+'%';
     let xN=u.level*150;document.getElementById('xpT').innerText=u.xp+'/'+xN;document.getElementById('xpB').style.width=(u.xp/xN)*100+'%';
@@ -333,7 +319,7 @@ function updUI(u){
 
 function renderWallet(){
     r('sync').then(d=>{if(d){
-        document.getElementById('currentEmail').innerText = d.user.fpEmail || "Не привязан";
+        document.getElementById('currentEmail').innerText = d.user.fpEmail || "Нет";
         document.getElementById('fpEmailInput').value = d.user.fpEmail || "";
     }});
 }
@@ -351,7 +337,7 @@ async function turn(act){let d=await r('action',{type:'battle_turn',payload:act}
 async function useFlask(){let d=await r('action',{type:'use_flask'});if(d){document.getElementById('batLog').innerHTML+=d.log+'<br>';updUI(d.user);}}
 async function goShop(){let p=prompt("1. Малое (20💰)\\n2. Большое (50💰)");if(!p)return;let d=await r('action',{type:'shop',payload:parseInt(p)-1});if(d){document.getElementById('mapLog').innerHTML+="<br>"+d.log;updUI(d.user);}}
 
-function renderInv(){r('sync').then(d=>{if(!d)return;let el=document.getElementById('invC');if(!d.user.inventory.length){el.innerHTML='<div class="card" style="text-align:center;color:#666">Инвентарь пуст</div>';return;}el.innerHTML=d.user.inventory.map(i=>{let s=i.type==='weapon'?'Урон: +'+i.power:i.type==='armor'?'Защита: +'+i.power:'Лечение: +'+i.heal;let b=i.type==='potion'?'':'<button class="btn btn-sell" onclick="eqItem('+i.id+')">ЭКИПИРОВАТЬ</button>';if(i.type!=='potion')b+='<button class="btn" style="background:#555;margin-top:5px" onclick="sellItem('+i.id+')">ВЫСТАВИТЬ НА P2P</button>';return '<div class="card"><h3>'+i.name+'</h3><small>'+s+'</small>'+b+'</div>';}).join('');});}
+function renderInv(){r('sync').then(d=>{if(!d)return;let el=document.getElementById('invC');if(!d.user.inventory.length){el.innerHTML='<div class="card" style="text-align:center;color:#666">Пусто</div>';return;}el.innerHTML=d.user.inventory.map(i=>{let s=i.type==='weapon'?'Урон: +'+i.power:i.type==='armor'?'Защита: +'+i.power:'Лечение: +'+i.heal;let b=i.type==='potion'?'':'<button class="btn btn-sell" onclick="eqItem('+i.id+')">ЭКИПИРОВАТЬ</button>';if(i.type!=='potion')b+='<button class="btn" style="background:#555;margin-top:5px" onclick="sellItem('+i.id+')">ВЫСТАВИТЬ НА P2P</button>';return '<div class="card"><h3>'+i.name+'</h3><small>'+s+'</small>'+b+'</div>';}).join('');});}
 async function eqItem(id){let d=await r('action',{type:'equip',payload:id});if(d){updUI(d.user);renderInv();}}
 async function sellItem(id){let p=prompt("Цена в 💰:");if(!p)return;let d=await r('action',{type:'sell',payload:{id,price:p}});if(d){updUI(d.user);renderInv();}}
 
@@ -363,8 +349,6 @@ async function wd(){
     if(d) alert(d.log);
     updUI(d.user);
 }
-
-init();
 </script>
 </body></html>`;
 
