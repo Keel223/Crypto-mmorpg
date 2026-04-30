@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Strategy P2P</title>
+    <title>Crypto Empire P2P</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div id="login-screen" class="screen">
-        <h1>🏰 Crypto Strategy</h1>
+        <h1>🏰 Crypto Empire</h1>
         <p class="note">GRC добывается только торговлей с игроками или пополнением!</p>
         <input type="text" id="username-input" placeholder="Логин">
         <input type="password" id="password-input" placeholder="Пароль">
@@ -16,10 +17,11 @@
         <button onclick="register()" class="btn-secondary">Зарегистрироваться</button>
     </div>
 
+    <!-- ОСНОВНОЙ ЭКРАН ИГРЫ -->
     <div id="game-screen" class="screen hidden">
         <header>
-            <h2>⚔️ <span id="user-name">Player</span></h2>
-            <div class="balance-box">💰 <span id="user-balance">0</span> GRC</div>
+            <h2>Игрок: <span id="user-name">Player</span></h2>
+            <div class="balance-box">💰 <span id="user-balance">0.0000</span> GRC</div>
         </header>
 
         <div class="res-bar">
@@ -31,77 +33,134 @@
         </div>
 
         <div class="construction-bar" id="con-bar" style="display:none;">🏗️ <span id="con-text"></span></div>
-        <div class="construction-bar" id="ship-bar" style="display:none; background:#1a332b; border-color:#28a745;">🚢 <span id="ship-text"></span></div>
+        <div class="construction-bar" id="exp-bar" style="display:none; background:#1a332b; border-color:#28a745;">🗺️ <span id="exp-text"></span></div>
 
         <nav class="tabs">
             <button class="tab-btn active" onclick="switchTab('city')">Город</button>
-            <button class="tab-btn" onclick="switchTab('military')">Войско & Море</button>
+            <button class="tab-btn" onclick="switchTab('military')">Войско & Карта</button>
+            <button class="tab-btn" onclick="switchTab('magic')">Магия & Герои</button>
             <button class="tab-btn" onclick="switchTab('market')">P2P Рынок</button>
             <button class="tab-btn" onclick="switchTab('wallet')">Банк 💸</button>
         </nav>
 
-        <!-- ВКЛАДКА ГОРОД (С Ремонтом) -->
+        <!-- ВКЛАДКА ГОРОД -->
         <div id="tab-city" class="tab-content active">
             <div class="panel-grid" id="buildings-grid"></div>
         </div>
 
-        <!-- ВКЛАДКА ВОЙСКО & МОРЕ -->
+        <!-- ВКЛАДКА ВОЙСКО & КАРТА -->
         <div id="tab-military" class="tab-content">
             <div class="panel-grid">
                 <div class="panel">
-                    <h3>Найм</h3>
+                    <h3>Найм армии</h3>
                     <div class="btn-group">
                         <button onclick="recruit('warriors', 1)">⚔️ Мечник</button>
                         <button onclick="recruit('archers', 1)">🏹 Лучник</button>
                         <button onclick="recruit('cavalry', 1)">🐎 Кавалерия</button>
                     </div>
-                    <p>Армия: ⚔️<span id="army-warriors">0</span> 🏹<span id="army-archers">0</span> 🐎<span id="army-cavalry">0</span></p>
+                    <div class="stat-box">
+                        <p>⚔️ <span id="army-warriors">0</span> | 🏹 <span id="army-archers">0</span> | 🐎 <span id="army-cavalry">0</span></p>
+                        <p>🔨 Кузница: <span id="forge-lvl">0</span> ур. (+<span id="forge-lvl">0</span>0% к атаке)</p>
+                    </div>
+                    <button onclick="upgradeArmy()" class="btn-secondary" style="margin-top:10px;">Улучшить армию (GRC)</button>
                 </div>
                 <div class="panel">
-                    <h3>🚢 Морская Торговля</h3>
-                    <p class="note">Отправьте корабль (30 мин) за 2000🪵 и 2000🪨. Принесет 5 GRC!</p>
-                    <button onclick="sendTradeShip()">Отправить корабль</button>
+                    <h3>🛡️ Защита базы</h3>
+                    <p>Щит от рейдов: <span id="shield-status" style="font-weight:bold;">❌ Нет</span></p>
+                    <button onclick="buyShield()" class="btn-danger">Купить Щит (20 GRC / 24ч)</button>
+                    <p class="note">Щит защитит ваши ресурсы от рейдов других игроков.</p>
                 </div>
             </div>
-            <div class="panel-grid">
-                 <div class="panel"><h3>🎯 Рейд</h3><input type="text" id="raid-target" placeholder="Никнейм цели"><button onclick="raid()" class="btn-danger">Атаковать!</button><p id="raid-log" class="note"></p></div>
-                 <div class="panel"><h3>🗺️ Руины (1 час)</h3><button onclick="sendExpedition()">Отправить армию</button></div>
+            
+            <div class="panel-grid" style="margin-top:15px;">
+                 <div class="panel">
+                    <h3>🎯 Точечный Рейд</h3>
+                    <input type="text" id="raid-target" placeholder="Никнейм цели">
+                    <button onclick="raid()" class="btn-danger">Атаковать!</button>
+                    <p id="raid-log" class="note"></p>
+                 </div>
+                 <div class="panel">
+                    <h3>⚔️ Случайный бой & Экспедиции</h3>
+                    <button onclick="findPvp()" class="btn-danger">Найти противника (PvP)</button>
+                    <p id="pvp-log" class="note"></p>
+                    <button onclick="sendExpedition()" style="margin-top:15px; background:#17a2b8;">🗺️ Отправить в Руины (1 час)</button>
+                 </div>
             </div>
-            <div class="panel"><h3>Карта Аванпостов</h3><div id="map-container" class="map-grid"></div></div>
+
+            <div class="panel" style="margin-top:15px; border-color: #ffc107;">
+                <h3>🏰 Великий Замок</h3>
+                <p>Владыка Замка: <span id="castle-owner" style="color:#ffc107; font-weight:bold;">Нет</span></p>
+                <p class="note">Владыка получает 10% налога со ВСЕХ сделок на P2P рынке! Для осады нужно 5000 силы армии. Потери при осаде: 50% армии.</p>
+                <button onclick="siegeCastle()" class="btn-danger">Осадить Замок!</button>
+            </div>
+
+            <div class="panel" style="margin-top:15px;">
+                <h3>🗺️ Карта Аванпостов</h3>
+                <div id="map-container" class="map-grid"></div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА МАГИЯ & ГЕРОИ -->
+        <div id="tab-magic" class="tab-content">
+            <div class="panel-grid">
+                <div class="panel">
+                    <h3>🧙 Наём Героев (За GRC)</h3>
+                    <p>Ваш герой: <span id="hero-name" style="color:#4ecca3; font-weight:bold;">Нет</span></p>
+                    <p class="note">Герой дает постоянный пассивный бонус!</p>
+                    <button onclick="buyHero('miner')">🧙 Шахтер (50 GRC / +50% добычи)</button>
+                    <button onclick="buyHero('general')" style="margin-top:10px;">⚔️ Генерал (50 GRC / +20% атаки)</button>
+                </div>
+                <div class="panel">
+                    <h3>⚗️ Алхимия (Обмен ресурсов)</h3>
+                    <p class="note">Конвертируйте излишки в редкие ресурсы.</p>
+                    <button onclick="alchemy('wood_to_stone')">🔄 500 🪵 Дерево ➡️ 200 🪨 Камень</button>
+                    <button onclick="alchemy('food_to_iron')" style="margin-top:10px;">🔄 500 🌾 Еда ➡️ 200 ⛏️ Железо</button>
+                </div>
+            </div>
         </div>
 
         <!-- ВКЛАДКА P2P РЫНОК -->
         <div id="tab-market" class="tab-content">
             <div class="panel">
                 <h3>📈 Продать ресурсы за GRC</h3>
-                <select id="sell-resource"><option value="wood">Дерево</option><option value="iron">Железо</option><option value="stone">Камень</option><option value="food">Еда</option></select>
-                <input type="number" id="sell-amount" placeholder="Кол-во">
+                <p class="note">Выставляйте любую цену (напр. 0.001). Налог Владыке Замка: 10%.</p>
+                <select id="sell-resource">
+                    <option value="wood">🪵 Дерево</option>
+                    <option value="iron">⛏️ Железо</option>
+                    <option value="stone">🪨 Камень</option>
+                    <option value="food">🌾 Еда</option>
+                </select>
+                <input type="number" id="sell-amount" placeholder="Количество">
                 <input type="number" id="sell-price" step="any" placeholder="Цена за 1 шт (GRC)">
-                <button onclick="placeSellOrder()">Выставить</button>
+                <button onclick="placeSellOrder()">Выставить на продажу</button>
             </div>
-            <div class="panel"><h3>Покупка за GRC</h3><ul id="market-orders"></ul></div>
+            <div class="panel">
+                <h3>🛒 Покупка ресурсов за GRC</h3>
+                <ul id="market-orders"></ul>
+            </div>
         </div>
 
         <!-- ВКЛАДКА БАНК -->
         <div id="tab-wallet" class="tab-content">
             <div class="panel-grid">
                 <div class="panel">
-                    <h3>📥 Пополнить (Официальный FP)</h3>
-                    <p class="note">Курс: 1 DOGE = 1000 GRC</p>
+                    <h3>📥 Пополнить баланс</h3>
+                    <p class="note">Курс покупки: 1 DOGE = 1000 GRC</p>
                     <button onclick="depositFaucetPay()" class="btn-secondary">Оплатить через FaucetPay</button>
-                    <p id="dep-log" class="note">Вы перейдете на сайт FaucetPay для безопасной оплаты.</p>
+                    <p class="note" style="margin-top:10px;">Вы перейдете на официальный сайт FaucetPay для безопасной оплаты.</p>
                 </div>
                 <div class="panel">
-                    <h3>💸 Вывести DOGE</h3>
-                    <p class="note">Курс: 10000 GRC = 1 DOGE. Мин 10000.</p>
-                    <input type="text" id="fp-wallet" placeholder="FaucetPay Кошелек">
-                    <input type="number" id="fp-amount" placeholder="Сумма GRC">
-                    <button onclick="withdrawFunds()">Вывести</button>
+                    <h3>💸 Вывод в DOGE</h3>
+                    <p class="note">Курс вывода: 10000 GRC = 1 DOGE. Минимальная сумма: 10000 GRC.</p>
+                    <input type="text" id="fp-wallet" placeholder="Ваш FaucetPay Email / Кошелек">
+                    <input type="number" id="fp-amount" placeholder="Сумма вывода (GRC)">
+                    <button onclick="withdrawFunds()">Вывести DOGE</button>
                     <p id="withdraw-log" class="note"></p>
                 </div>
             </div>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
-    </html>
+                                                                                             </html>
