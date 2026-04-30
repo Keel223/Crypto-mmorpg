@@ -161,87 +161,89 @@ app.post('/api/action', auth, (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- HTML & CSS ---
+// --- HTML & CSS (Упрощено для 100% работы на мобилках) ---
 const CSS = `
-:root{--bg:#0a0a0a;--p:#141414;--b:#222;--g:#f1c40f;--r:#e74c3c;--bl:#3498db;--gr:#2ecc71;--y:#f39c12;--t:#ddd}
-*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-body{background:var(--bg);color:var(--t);height:100vh;display:flex;flex-direction:column;overflow:hidden}
-.header{background:var(--p);padding:15px;border-bottom:1px solid var(--b);display:flex;justify-content:space-between;align-items:center;z-index:20;position:relative}
-.header h1{font-size:16px;color:var(--g);flex:1;text-align:center}
-.hamburger{font-size:24px;cursor:pointer;color:white;background:none;border:none;z-index:30}
-.gold-display{font-size:16px;color:var(--g);font-weight:bold}
-.content{flex:1;overflow-y:auto;padding:15px;background:#000;z-index:1}
-.page{display:none;height:100%}.page.active{display:flex;flex-direction:column}
-.stat-row{display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px;color:#aaa}.stat-row span{color:white;font-weight:bold}
-.bar{height:6px;background:#222;border-radius:3px;margin-bottom:15px;overflow:hidden}.bar-fill{height:100%;transition:width 0.3s}
-.hp{background:var(--r)}.xp{background:var(--bl)}
-.card{background:var(--p);border:1px solid var(--b);padding:12px;border-radius:6px;margin-bottom:10px}
-.card h3{font-size:14px;margin-bottom:5px;color:white}.card small{color:#888;font-size:12px;display:block;margin-bottom:8px}
-.log-box{background:#050505;border:1px solid #1a1a1a;padding:10px;border-radius:6px;font-size:13px;line-height:1.5;min-height:150px;max-height:200px;overflow-y:auto;margin-bottom:15px;color:#aaa}
-.btn{width:100%;padding:14px;border:none;border-radius:6px;font-weight:bold;font-size:14px;cursor:pointer;margin-bottom:8px;color:white;text-transform:uppercase}
-.btn-atk{background:#27ae60}.btn-def{background:#2980b9}.btn-flask{background:#8e44ad}.btn-flee{background:#555}.btn-sell{background:var(--y);color:#000}
-.input{width:100%;padding:12px;background:#111;border:1px solid var(--b);color:white;border-radius:4px;margin-bottom:8px;font-size:14px}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial; }
+body { background: #000; color: #fff; height: 100vh; display: flex; flex-direction: column; }
+.header { background: #111; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; }
+.header h1 { font-size: 16px; color: #f1c40f; }
+.hamburger { font-size: 24px; background: none; border: none; color: white; cursor: pointer; }
+.gold-hdr { font-size: 16px; color: #f1c40f; }
+.content { flex: 1; overflow-y: auto; padding: 15px; background: #0a0a0a; }
+.page { display: none; } .page.active { display: block; }
+.bar-bg { height: 15px; background: #222; border-radius: 8px; margin-bottom: 15px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; background: #e74c3c; transition: width 0.3s; }
+.bar-fill.blue { background: #3498db; }
+.bar-text { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; }
+.card { background: #151515; border: 1px solid #333; padding: 12px; border-radius: 5px; margin-bottom: 10px; }
+.card h3 { font-size: 14px; color: #fff; margin-bottom: 5px; }
+.card small { color: #888; font-size: 12px; display: block; margin-bottom: 5px; }
+.log-box { background: #050505; border: 1px solid #222; padding: 10px; border-radius: 5px; font-size: 13px; line-height: 1.5; min-height: 120px; max-height: 200px; overflow-y: auto; margin-bottom: 15px; color: #aaa; }
+.btn { width: 100%; padding: 15px; border: none; border-radius: 5px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 8px; color: white; text-transform: uppercase; background: #333; }
+.btn-g { background: #27ae60; } .btn-b { background: #2980b9; } .btn-p { background: #8e44ad; } .btn-y { background: #f1c40f; color: #000; }
+.input { width: 100%; padding: 12px; background: #111; border: 1px solid #333; color: white; border-radius: 4px; margin-bottom: 8px; font-size: 14px; }
 /* МЕНЮ */
-.sidebar-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:40;display:none}
-.sidebar{position:fixed;top:0;left:-300px;width:280px;height:100%;background:var(--p);z-index:50;transition:left 0.3s;padding-top:50px;border-right:1px solid var(--b)}
-.sidebar.open{left:0}
-.sidebar a,.sidebar button{display:block;width:100%;text-align:left;padding:15px 20px;color:white;background:none;border:none;font-size:16px;cursor:pointer;text-decoration:none;border-bottom:1px solid var(--b)}
-.sidebar a:hover,.sidebar button:hover{background:#222}
+#myMenu { position: fixed; top: 0; left: -300px; width: 300px; height: 100%; background: #111; z-index: 1000; transition: 0.3s; border-right: 2px solid #333; padding-top: 50px; }
+#myMenu.open { left: 0; }
+#menuBg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 999; display: none; }
+#menuBg.open { display: block; }
+.menu-link { display: block; width: 100%; text-align: left; padding: 20px; color: white; background: none; border: none; border-bottom: 1px solid #222; font-size: 16px; cursor: pointer; }
+.menu-link:hover { background: #222; }
 `;
 
-const PAGE_AUTH = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auth</title><style>${CSS}body{justify-content:center;padding:20px}.box{width:100%;max-width:320px}.box h1{text-align:center;margin-bottom:20px;font-size:20px}.err{color:var(--r);font-size:12px;text-align:center;margin-bottom:10px;display:none}</style></head><body><div class="box"><h1>CRYPTO MMO</h1><div id="err" class="err"></div><input class="input" id="user" placeholder="Логин"><input class="input" type="password" id="pass" placeholder="Пароль"><select class="input" id="cls"><option value="warrior">Воин</option><option value="mage">Маг</option></select><button class="btn" style="background:var(--g);color:#000" onclick="reg()">СОЗДАТЬ</button><button class="btn" style="background:#333" onclick="log()">ВХОД</button></div><script>const r=(u,b={})=>fetch('/api/'+u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());const e=m=>{let el=document.getElementById('err');el.innerText=m;el.style.display='block';};async function reg(){let d=await r('register',{username:document.getElementById('user').value,password:document.getElementById('pass').value,pClass:document.getElementById('cls').value});if(d.error)return e(d.error);localStorage.setItem('tk',d.token);location.href='/game';}async function log(){let d=await r('login',{username:document.getElementById('user').value,password:document.getElementById('pass').value});if(d.error)return e(d.error);localStorage.setItem('tk',d.token);location.href='/game';}</script></body></html>`;
+const PAGE_AUTH = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auth</title><style>${CSS}body{justify-content:center;padding:20px}.box{width:100%;max-width:320px}.box h1{text-align:center;margin-bottom:20px;font-size:20px}.err{color:red;font-size:12px;text-align:center;margin-bottom:10px;display:none}</style></head><body><div class="box"><h1>CRYPTO MMO</h1><div id="err" class="err"></div><input class="input" id="user" placeholder="Логин"><input class="input" type="password" id="pass" placeholder="Пароль"><select class="input" id="cls"><option value="warrior">Воин</option><option value="mage">Маг</option></select><button class="btn btn-y" onclick="reg()">СОЗДАТЬ</button><button class="btn" onclick="log()">ВХОД</button></div><script>const r=(u,b={})=>fetch('/api/'+u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());const e=m=>{let el=document.getElementById('err');el.innerText=m;el.style.display='block';};async function reg(){let d=await r('register',{username:document.getElementById('user').value,password:document.getElementById('pass').value,pClass:document.getElementById('cls').value});if(d.error)return e(d.error);localStorage.setItem('tk',d.token);location.reload();}async function log(){let d=await r('login',{username:document.getElementById('user').value,password:document.getElementById('pass').value});if(d.error)return e(d.error);localStorage.setItem('tk',d.token);location.reload();}</script></body></html>`;
 
 const PAGE_GAME = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>MMO</title><style>${CSS}</style></head><body>
 
-<div class="sidebar-overlay" id="overlay" onclick="closeMenu()"></div>
-<div class="sidebar" id="sidebar">
-    <a href="#" onclick="go('prof')">👤 Профиль</a>
-    <a href="#" onclick="go('map')">🗺️ Карта и Охота</a>
-    <a href="#" onclick="go('battle')">⚔️ Бой</a>
-    <a href="#" onclick="go('inv')">🎒 Инвентарь</a>
-    <a href="#" onclick="go('mkt')">🏦 P2P Рынок</a>
-    <a href="#" onclick="go('wallet')">💰 Кошелек</a>
-    <button style="color:var(--r); margin-top:50px;" onclick="location.href='/logout'">🚪 Выйти</button>
+<div id="menuBg" onclick="closeMenu()"></div>
+<div id="myMenu">
+    <button class="menu-link" onclick="go('prof')">👤 Профиль</button>
+    <button class="menu-link" onclick="go('map')">🗺️ Охота</button>
+    <button class="menu-link" onclick="go('battle')">⚔️ Бой</button>
+    <button class="menu-link" onclick="go('inv')">🎒 Инвентарь</button>
+    <button class="menu-link" onclick="go('mkt')">🏦 Рынок</button>
+    <button class="menu-link" onclick="go('wallet')">💰 Кошелек</button>
+    <button class="menu-link" style="color:red; margin-top:50px;" onclick="location.href='/logout'">🚪 Выйти</button>
 </div>
 
 <div class="header">
     <button class="hamburger" onclick="openMenu()">☰</button>
     <h1 id="hdr">CRYPTO MMO</h1>
-    <div class="gold-display">💰 <span id="hdrG">0</span></div>
+    <div class="gold-hdr">💰 <span id="hdrG">0</span></div>
 </div>
 
 <div class="content">
     <div id="pg-prof" class="page active">
-        <div class="stat-row"><span>❤️ HP</span><span id="hpT">0/0</span></div><div class="bar"><div class="bar-fill hp" id="hpB" style="width:0%"></div></div>
-        <div class="stat-row"><span>⭐ XP</span><span id="xpT">0/0</span></div><div class="bar"><div class="bar-fill xp" id="xpB" style="width:0%"></div></div>
+        <div class="bar-bg"><div class="bar-fill" id="hpBar" style="width:0%"></div><div class="bar-text" id="hpTxt">0/0</div></div>
+        <div class="bar-bg"><div class="bar-fill blue" id="xpBar" style="width:0%"></div><div class="bar-text" id="xpTxt">0/0</div></div>
         <div class="card"><h3>⚔️ Оружие</h3><span id="eqW" style="color:#888">Пусто</span></div>
         <div class="card"><h3>🛡️ Броня</h3><span id="eqA" style="color:#888">Пусто</span></div>
-        <div class="card"><h3>📊 Статы</h3>Урон: <span id="stD" style="color:var(--g)">0</span> | Защита: <span id="stF" style="color:var(--g)">0</span> | Ур: <span id="stL" style="color:var(--g)">0</span></div>
+        <div class="card"><h3>📊 Характеристики</h3>Урон: <span id="stD" style="color:#f1c40f">0</span> | Защита: <span id="stF" style="color:#f1c40f">0</span> | Ур: <span id="stL" style="color:#f1c40f">0</span></div>
     </div>
 
     <div id="pg-map" class="page">
-        <div class="log-box" id="mapLog">Выберите локацию.</div>
-        <button class="btn" style="background:#27ae60" onclick="explore('forest')">🌲 Тёмный Лес</button>
-        <button class="btn" style="background:#8e44ad" onclick="explore('dungeon')">💀 Пещера</button>
+        <div class="log-box" id="mapLog">Выберите локацию для поиска врагов.</div>
+        <button class="btn btn-g" onclick="explore('forest')">🌲 Идти в Тёмный Лес</button>
+        <button class="btn btn-p" onclick="explore('dungeon')">💀 Идти в Пещеру</button>
         <button class="btn" style="background:#2c3e50" onclick="goShop()">🧪 Магазин Зелий</button>
     </div>
 
     <div id="pg-battle" class="page">
         <div class="log-box" id="batLog">Ожидание...</div>
-        <div style="background:#111;padding:10px;border-radius:6px;margin-bottom:15px;text-align:center">
-            <span style="color:#aaa">ВРАГ:</span> <span id="mobN" style="color:var(--r);font-weight:bold">???</span>
-            <div style="margin-top:5px"><div class="bar" style="margin:0"><div class="bar-fill hp" id="mobHB" style="width:100%"></div></div></div>
+        <div style="background:#111;padding:10px;border-radius:5px;margin-bottom:15px;text-align:center">
+            <span style="color:#aaa">ВРАГ:</span> <span id="mobN" style="color:red;font-weight:bold">???</span>
+            <div style="margin-top:5px"><div class="bar-bg" style="margin:0"><div class="bar-fill" id="mobHB" style="width:100%"></div></div></div>
         </div>
         <div id="batBtns">
-            <button class="btn btn-atk" onclick="turn('attack')">⚔️ АТАКА</button>
-            <button class="btn btn-def" onclick="turn('defend')">🛡️ ЗАЩИТА</button>
-            <button class="btn btn-flask" onclick="useFlask()">🧪 ФЛАСКА</button>
-            <button class="btn btn-flee" onclick="turn('flee')">🏃 СБЕЖАТЬ</button>
+            <button class="btn btn-g" onclick="turn('attack')">⚔️ АТАКА</button>
+            <button class="btn btn-b" onclick="turn('defend')">🛡️ ЗАЩИТА</button>
+            <button class="btn btn-p" onclick="useFlask()">🧪 ФЛАСКА</button>
+            <button class="btn" onclick="turn('flee')">🏃 СБЕЖАТЬ</button>
         </div>
     </div>
 
     <div id="pg-inv" class="page"><div id="invC"></div></div>
-    <div id="pg-mkt" class="page"><h3 style="margin-bottom:10px;color:var(--g)">P2P РЫНОК</h3><div id="mktC"></div></div>
+    <div id="pg-mkt" class="page"><h3 style="margin-bottom:10px;color:#f1c40f">P2P РЫНОК</h3><div id="mktC"></div></div>
 
     <div id="pg-wallet" class="page">
         <div class="card" style="text-align:center">
@@ -249,14 +251,14 @@ const PAGE_GAME = `<!DOCTYPE html><html><head><meta name="viewport" content="wid
             <small>Укажите email для вывода</small>
             <div style="margin-top:10px">
                 <input class="input" type="email" id="fpEmailInput" placeholder="email@faucetpay.com">
-                <button class="btn" style="background:var(--bl)" onclick="linkEmail()">🔒 ПРИВЯЗАТЬ</button>
+                <button class="btn btn-b" onclick="linkEmail()">🔒 ПРИВЯЗАТЬ</button>
             </div>
-            <div style="margin-top:15px; font-size:14px;">Текущий: <span id="currentEmail" style="color:var(--g)">Нет</span></div>
+            <div style="margin-top:15px; font-size:14px;">Текущий: <span id="currentEmail" style="color:#f1c40f">Нет</span></div>
         </div>
-        <h3 style="margin:20px 0 10px;color:var(--g)">ВЫВОД (1USDT = 1000💰)</h3>
+        <h3 style="margin:20px 0 10px;color:#f1c40f">ВЫВОД (1USDT = 1000💰)</h3>
         <div class="card">
             <input class="input" type="number" id="wdAmount" placeholder="Сумма золота (мин 1000)">
-            <button class="btn" style="background:var(--g); color:#000" onclick="wd()">💸 ВЫВЕСТИ USDT</button>
+            <button class="btn btn-y" onclick="wd()">💸 ВЫВЕСТИ USDT</button>
         </div>
     </div>
 </div>
@@ -271,17 +273,17 @@ const r=async(u,b={})=>{
     return res.json();
 };
 
-// ИСПРАВЛЕННОЕ МЕНЮ
+// Надежное меню
 function openMenu(){
-    document.getElementById('sidebar').classList.add('open');
-    document.getElementById('overlay').style.display='block';
+    document.getElementById('myMenu').classList.add('open');
+    document.getElementById('menuBg').classList.add('open');
 }
 function closeMenu(){
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('overlay').style.display='none';
+    document.getElementById('myMenu').classList.remove('open');
+    document.getElementById('menuBg').classList.remove('open');
 }
 function go(p){
-    closeMenu(); // Сначала закрываем меню
+    closeMenu(); 
     document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
     document.getElementById('pg-'+p).classList.add('active');
     if(p==='inv')renderInv();
@@ -289,12 +291,8 @@ function go(p){
     if(p==='wallet')renderWallet();
 }
 
-// ИСПРАВЛЕННАЯ ЗАГРУЗКА
 window.onload = async function() {
-    // Сразу рисуем интерфейс, не ждя сервер
-    document.getElementById('hdr').innerText = "Загрузка данных...";
-    
-    // Потом грузим данные
+    document.getElementById('hdr').innerText = "Подключение...";
     let d = await r('sync');
     if(d) updUI(d.user);
 };
@@ -303,11 +301,18 @@ function updUI(u){
     if(!u) return;
     document.getElementById('hdr').innerText = (u.class==='mage'?'Маг ':'Воин ') + u.username;
     document.getElementById('hdrG').innerText=u.gold;
-    document.getElementById('hpT').innerText=u.hp+'/'+u.maxHp;document.getElementById('hpB').style.width=(u.hp/u.maxHp)*100+'%';
-    let xN=u.level*150;document.getElementById('xpT').innerText=u.xp+'/'+xN;document.getElementById('xpB').style.width=(u.xp/xN)*100+'%';
+    
+    // Явное управление полосками HP и XP
+    document.getElementById('hpTxt').innerText = '❤️ HP: ' + u.hp + '/' + u.maxHp;
+    document.getElementById('hpBar').style.width = (u.hp/u.maxHp)*100 + '%';
+    
+    let xN = u.level * 150;
+    document.getElementById('xpTxt').innerText = '⭐ XP: ' + u.xp + '/' + xN;
+    document.getElementById('xpBar').style.width = (u.xp/xN)*100 + '%';
+
     let dm=u.baseDmg,df=u.baseDef;
-    const w=u.inventory.find(i=>i.id===u.equippedWeapon);if(w){dm+=w.power;document.getElementById('eqW').innerHTML=w.name+' <span style="color:var(--g)">(+'+w.power+')</span>';}else document.getElementById('eqW').innerText="Пусто";
-    const a=u.inventory.find(i=>i.id===u.equippedArmor);if(a){df+=a.power;document.getElementById('eqA').innerHTML=a.name+' <span style="color:var(--g)">(+'+a.power+')</span>';}else document.getElementById('eqA').innerText="Пусто";
+    const w=u.inventory.find(i=>i.id===u.equippedWeapon);if(w){dm+=w.power;document.getElementById('eqW').innerHTML=w.name+' <span style="color:#f1c40f">(+'+w.power+')</span>';}else document.getElementById('eqW').innerText="Пусто";
+    const a=u.inventory.find(i=>i.id===u.equippedArmor);if(a){df+=a.power;document.getElementById('eqA').innerHTML=a.name+' <span style="color:#f1c40f">(+'+a.power+')</span>';}else document.getElementById('eqA').innerText="Пусто";
     document.getElementById('stD').innerText=dm;document.getElementById('stF').innerText=df;document.getElementById('stL').innerText=u.level;
     
     if(u.inBattle&&u.battleState){
@@ -326,22 +331,22 @@ function renderWallet(){
 
 async function linkEmail(){
     let email = document.getElementById('fpEmailInput').value;
-    if(!email || !email.includes('@')) return alert("Введите корректный email");
+    if(!email || !email.includes('@')) return alert("Введите email");
     let d = await r('action', {type:'link_email', payload:email});
     if(d){ alert(d.log); updUI(d.user); renderWallet(); }
 }
 
 async function explore(loc){let d=await r('action',{type:'explore',payload:loc});if(d){document.getElementById('mapLog').innerHTML=d.log;updUI(d.user);if(d.user.inBattle)go('battle');}}
 function startBattleLoop(){battleInterval=setInterval(async()=>{let d=await r('sync');if(!d||!d.user.inBattle){clearInterval(battleInterval);battleInterval=null;document.getElementById('batBtns').innerHTML='<button class="btn" style="background:#333">БОЙ ОКОНЧЕН</button>';updUI(d.user);return;}updUI(d.user);},1000);}
-async function turn(act){let d=await r('action',{type:'battle_turn',payload:act});if(!d)return;document.getElementById('batLog').innerHTML+=d.log+'<br>';document.getElementById('batLog').scrollTop=9999;updUI(d.user);if(d.battleEnded){clearInterval(battleInterval);battleInterval=null;document.getElementById('batBtns').innerHTML='<button class="btn" style="background:var(--g);color:#000" onclick="go(\'map\')">ВЕРНУТЬСЯ НА КАРТУ</button>';}}
+async function turn(act){let d=await r('action',{type:'battle_turn',payload:act});if(!d)return;document.getElementById('batLog').innerHTML+=d.log+'<br>';document.getElementById('batLog').scrollTop=9999;updUI(d.user);if(d.battleEnded){clearInterval(battleInterval);battleInterval=null;document.getElementById('batBtns').innerHTML='<button class="btn btn-y" onclick="go(\'map\')">ВЕРНУТЬСЯ НА КАРТУ</button>';}}
 async function useFlask(){let d=await r('action',{type:'use_flask'});if(d){document.getElementById('batLog').innerHTML+=d.log+'<br>';updUI(d.user);}}
 async function goShop(){let p=prompt("1. Малое (20💰)\\n2. Большое (50💰)");if(!p)return;let d=await r('action',{type:'shop',payload:parseInt(p)-1});if(d){document.getElementById('mapLog').innerHTML+="<br>"+d.log;updUI(d.user);}}
 
-function renderInv(){r('sync').then(d=>{if(!d)return;let el=document.getElementById('invC');if(!d.user.inventory.length){el.innerHTML='<div class="card" style="text-align:center;color:#666">Пусто</div>';return;}el.innerHTML=d.user.inventory.map(i=>{let s=i.type==='weapon'?'Урон: +'+i.power:i.type==='armor'?'Защита: +'+i.power:'Лечение: +'+i.heal;let b=i.type==='potion'?'':'<button class="btn btn-sell" onclick="eqItem('+i.id+')">ЭКИПИРОВАТЬ</button>';if(i.type!=='potion')b+='<button class="btn" style="background:#555;margin-top:5px" onclick="sellItem('+i.id+')">ВЫСТАВИТЬ НА P2P</button>';return '<div class="card"><h3>'+i.name+'</h3><small>'+s+'</small>'+b+'</div>';}).join('');});}
+function renderInv(){r('sync').then(d=>{if(!d)return;let el=document.getElementById('invC');if(!d.user.inventory.length){el.innerHTML='<div class="card" style="text-align:center;color:#666">Пусто</div>';return;}el.innerHTML=d.user.inventory.map(i=>{let s=i.type==='weapon'?'Урон: +'+i.power:i.type==='armor'?'Защита: +'+i.power:'Лечение: +'+i.heal;let b=i.type==='potion'?'':'<button class="btn btn-y" onclick="eqItem('+i.id+')">ЭКИПИРОВАТЬ</button>';if(i.type!=='potion')b+='<button class="btn" style="margin-top:5px" onclick="sellItem('+i.id+')">ВЫСТАВИТЬ НА P2P</button>';return '<div class="card"><h3>'+i.name+'</h3><small>'+s+'</small>'+b+'</div>';}).join('');});}
 async function eqItem(id){let d=await r('action',{type:'equip',payload:id});if(d){updUI(d.user);renderInv();}}
 async function sellItem(id){let p=prompt("Цена в 💰:");if(!p)return;let d=await r('action',{type:'sell',payload:{id,price:p}});if(d){updUI(d.user);renderInv();}}
 
-function renderMkt(){r('sync').then(d=>{if(!d)return;let el=document.getElementById('mktC');if(!d.market.length){el.innerHTML='<div class="card" style="text-align:center;color:#666">Рынок пуст</div>';return;}el.innerHTML=d.market.map(m=>{let s=m.item.type==='weapon'?'Урон: +'+m.item.power:'Защита: +'+m.item.power;return '<div class="card"><h3>'+m.item.name+'</h3><small>'+s+' | '+m.seller+'</small><div style="font-size:18px;color:var(--g);margin:10px 0">'+m.price+' 💰</div><button class="btn btn-atk" onclick="buyItem('+m.id+')">КУПИТЬ</button></div>';}).join('');});}
+function renderMkt(){r('sync').then(d=>{if(!d)return;let el=document.getElementById('mktC');if(!d.market.length){el.innerHTML='<div class="card" style="text-align:center;color:#666">Рынок пуст</div>';return;}el.innerHTML=d.market.map(m=>{let s=m.item.type==='weapon'?'Урон: +'+m.item.power:'Защита: +'+m.item.power;return '<div class="card"><h3>'+m.item.name+'</h3><small>'+s+' | '+m.seller+'</small><div style="font-size:18px;color:#f1c40f;margin:10px 0">'+m.price+' 💰</div><button class="btn btn-g" onclick="buyItem('+m.id+')">КУПИТЬ</button></div>';}).join('');});}
 async function buyItem(id){let d=await r('action',{type:'buy',payload:id});if(d){alert(d.log);updUI(d.user);renderMkt();}}
 
 async function wd(){
