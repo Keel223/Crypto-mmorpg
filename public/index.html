@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Strategy P2P</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
+    <div id="login-screen" class="screen">
+        <h1>Crypto Strategy</h1>
+        <input type="text" id="username-input" placeholder="Введите никнейм">
+        <button onclick="login()">Войти</button>
+    </div>
+
+    <!-- ЭКРАН ИГРЫ -->
+    <div id="game-screen" class="screen hidden">
+        <header>
+            <h2>Добро пожаловать, <span id="user-name">Player</span>!</h2>
+            <div class="balance-box">Баланс: <span id="user-balance">0</span> GRC</div>
+        </header>
+
+        <div class="grid-container">
+            <!-- РЕСУРСЫ И ДОБЫЧА -->
+            <div class="panel">
+                <h3>Ресурсы и Добыча</h3>
+                <div id="resources-display">
+                    <p>🪵 Дерево: <span id="res-wood">0</span></p>
+                    <p>⛏️ Железо: <span id="res-iron">0</span></p>
+                    <p>🌾 Еда: <span id="res-food">0</span></p>
+                </div>
+                <button onclick="gatherResources()" class="btn-gather">Собрать добычу (+1 мин)</button>
+            </div>
+
+            <!-- P2P РЫНОК -->
+            <div class="panel">
+                <h3>P2P Рынок</h3>
+                <div class="sell-form">
+                    <select id="sell-resource">
+                        <option value="wood">Дерево</option>
+                        <option value="iron">Железо</option>
+                        <option value="food">Еда</option>
+                    </select>
+                    <input type="number" id="sell-amount" placeholder="Кол-во">
+                    <input type="number" id="sell-price" placeholder="Цена за 1 шт (GRC)">
+                    <button onclick="placeSellOrder()">Продать</button>
+                </div>
+                <h4>Книга ордеров (Купить)</h4>
+                <ul id="market-orders">
+                    <!-- Ордера будут тут -->
+                </ul>
+            </div>
+
+            <!-- ВЫВОД СРЕДСТВ -->
+            <div class="panel">
+                <h3>FaucetPay Вывод</h3>
+                <input type="text" id="fp-wallet" placeholder="Ваш FaucetPay Email/Кошелек">
+                <input type="number" id="fp-amount" placeholder="Сумма вывода (GRC)">
+                <button onclick="withdrawFunds()">Вывести</button>
+                <p class="note">Комиссия рынка 5%. Вывод в DOGE.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+              </html>
