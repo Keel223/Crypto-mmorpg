@@ -1,75 +1,39 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: #1a1a2e;
-    color: #eee;
-    margin: 0;
-    padding: 20px;
-}
-.screen {
-    max-width: 800px;
-    margin: 0 auto;
-}
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #111; color: #eee; margin: 0; padding: 0; }
+.screen { max-width: 1000px; margin: 0 auto; padding: 20px; }
 .hidden { display: none; }
+h1, h2, h3 { color: #ffaa00; text-shadow: 1px 1px 2px black; margin-top:0; }
 
-h1, h2, h3 { color: #e94560; }
+input, select, button { padding: 10px; margin: 5px 0; border: none; border-radius: 5px; width: 100%; box-sizing: border-box; }
+input, select { background: #222; color: white; border: 1px solid #444; }
+button { background: #28a745; color: white; cursor: pointer; font-weight: bold; transition: 0.2s; }
+button:hover { filter: brightness(1.2); }
+.btn-danger { background: #dc3545; }
 
-input, select, button {
-    padding: 10px;
-    margin: 5px 0;
-    border: none;
-    border-radius: 5px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-input { background: #16213e; color: white; border: 1px solid #0f3460; }
-button { background: #e94560; color: white; cursor: pointer; font-weight: bold; }
-button:hover { background: #c73652; }
-
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #16213e;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
+header { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; padding: 15px; border-radius: 8px; border: 2px solid #ffaa00; margin-bottom: 10px; }
 .balance-box { font-size: 1.2rem; color: #4ecca3; font-weight: bold; }
 
-.grid-container {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-}
+.res-bar { display: flex; justify-content: space-around; background: #1a1a1a; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-weight: bold; border: 1px solid #333; }
 
-.panel {
-    background: #16213e;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #0f3460;
-}
+.tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab-btn { background: #333; flex: 1; min-width: 100px; }
+.tab-btn.active { background: #ffaa00; color: #000; }
 
-.sell-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-.sell-form button { grid-column: span 2; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
-.btn-gather { background: #0f3460; margin-top: 10px; }
-.btn-gather:hover { background: #1a4a8a; }
+.panel { background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; }
+.panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
 
-ul { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; }
-li {
-    background: #1a1a2e;
-    padding: 10px;
-    margin-bottom: 5px;
-    border-radius: 5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.buy-btn { background: #4ecca3; color: #1a1a2e; width: auto; padding: 5px 15px; }
-.note { font-size: 0.8rem; color: #aaa; margin-top: 10px; }
+ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+li { background: #252525; padding: 10px; margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; }
+.buy-btn { background: #007bff; width: auto; padding: 5px 15px; margin: 0; }
+
+.map-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.map-post { background: #252525; padding: 15px; text-align: center; border-radius: 5px; border: 2px solid #444; cursor: pointer; }
+.map-post.owned { border-color: #ffaa00; background: #332b00; }
+
+#chat-box { height: 200px; overflow-y: auto; background: #000; padding: 10px; margin-bottom: 10px; border-radius: 5px; font-size: 0.9rem; text-align: left; }
+.chat-msg { margin-bottom: 5px; }
+.chat-author { color: #ffaa00; font-weight: bold; }
+
+.note { font-size: 0.8rem; color: #aaa; margin-top: 10px; color: #ffaa00; }
