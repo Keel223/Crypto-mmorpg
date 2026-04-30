@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 
 let db = { users: {}, market: {}, nextId: 1 };
-const FP_KEY = process.env.FAUCETPAY_API_KEY || "test_key";
+const FP_KEY = process.env.FAUCETPAY_API_KEY || "6093864477e0ad75814f955d6d382665829b1912072310cbfcd17f6a499b77c9";
 const EX_RATE = 1000;
 const TOKENS = new Map(); // Виртуальное хранилище токенов
 
