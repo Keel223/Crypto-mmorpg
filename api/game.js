@@ -8,22 +8,20 @@ const FP_API_KEY = '6093864477e0ad75814f955d6d382665829b1912072310cbfcd17f6a499b
 const FP_CURRENCY = 'DOGE';
 const DEPOSIT_RATE = 1000;   // 1 DOGE = 1000 GRC
 const WITHDRAW_RATE = 10000; // 10000 GRC = 1 DOGE
-
-// СЕКРЕТ ДЛЯ CALLBACK (Обязательно установите этот же в настройках FaucetPay API)
-const FP_CALLBACK_SECRET = 'MY_SUPER_SECRET_123'; 
+const FP_CALLBACK_SECRET = 'MY_SUPER_SECRET_123'; // ПОМЕНЯЙТЕ НА СВОЙ СЛОЖНЫЙ ПАРОЛЬ!
 
 function hashPassword(password) { return crypto.createHash('sha256').update(password).digest('hex'); }
 
 const BUILDING_COSTS = {
-    townhall: { wood: 1000, stone: 1000, iron: 500, time: 30, hp: 100 },
-    woodcutter: { wood: 200, stone: 50, iron: 0, time: 10, hp: 50 },
-    mine: { wood: 100, stone: 200, iron: 50, time: 15, hp: 60 },
-    quarry: { wood: 150, stone: 50, iron: 20, time: 12, hp: 60 },
-    farm: { wood: 150, stone: 50, iron: 0, time: 10, hp: 40 },
-    barrack: { wood: 300, stone: 500, iron: 300, time: 20, hp: 80 },
-    archery: { wood: 400, stone: 200, iron: 400, time: 25, hp: 70 },
-    stable: { wood: 500, stone: 300, iron: 600, time: 30, hp: 90 },
-    tower: { wood: 1000, stone: 800, iron: 500, mana: 100, time: 60, hp: 150 }
+    townhall:   { wood: 1000, stone: 1000, iron: 500, time: 30, hp: 100, reqTownhall: 0 },
+    woodcutter: { wood: 200,  stone: 50,   iron: 0,   time: 10, hp: 50,  reqTownhall: 1 },
+    mine:       { wood: 100,  stone: 200,  iron: 50,  time: 15, hp: 60,  reqTownhall: 1 },
+    quarry:     { wood: 150,  stone: 50,   iron: 20,  time: 12, hp: 60,  reqTownhall: 2 },
+    farm:       { wood: 150,  stone: 50,   iron: 0,   time: 10, hp: 40,  reqTownhall: 1 },
+    barrack:    { wood: 300,  stone: 500,  iron: 300, time: 20, hp: 80,  reqTownhall: 3 },
+    archery:    { wood: 400,  stone: 200,  iron: 400, time: 25, hp: 70,  reqTownhall: 4 },
+    stable:     { wood: 500,  stone: 300,  iron: 600, time: 30, hp: 90,  reqTownhall: 5 },
+    tower:      { wood: 1000, stone: 800,  iron: 500, mana: 100, time: 60, hp: 150, reqTownhall: 7 }
 };
 
 function getDB() {
@@ -50,18 +48,12 @@ module.exports = async (req, res) => {
         const db = getDB();
         const now = Date.now();
 
-        // --- FAUCETPAY CALLBACK (Официальное зачисление при оплате на сайте FP) ---
+        // --- FAUCETPAY CALLBACK (Официальное зачисление) ---
         if (isGet && action === 'fp_callback') {
             const { custom_username, amount, currency, secret } = body;
-            if (secret !== FP_CALLBACK_SECRET) return res.status(403).send('Invalid secret');
-            if (currency !== FP_CURRENCY) return res.status(400).send('Wrong currency');
-
+            if (secret !== FP_CALLBACK_SECRET || currency !== FP_CURRENCY) return res.status(403).send('Invalid');
             const u = db.users[custom_username];
-            if (u) {
-                u.balance += parseFloat(amount) * DEPOSIT_RATE; // Зачисляем GRC
-                saveDB(db);
-                return res.status(200).send('OK');
-            }
+            if (u) { u.balance += parseFloat(amount) * DEPOSIT_RATE; saveDB(db); return res.status(200).send('OK'); }
             return res.status(404).send('User not found');
         }
 
@@ -88,77 +80,65 @@ module.exports = async (req, res) => {
             
             let elapsed = (now - u.lastUpdate) / 1000;
             let mapBonus = 1 + (db.map.filter(p => p.owner === username).reduce((acc, p) => acc + p.bonus, 0));
-            // Эффективность зависит от HP здания (если сломано - дает меньше)
-            for(let b in u.buildings) {
-                if(u.buildings[b] > 0) {
-                    let maxHp = BUILDING_COSTS[b].hp * u.buildings[b];
-                    let hpMod = u.buildingHp[b] / maxHp;
-                    let production = 0;
-                    if(b === 'woodcutter') production = u.buildings[b] * 2 * hpMod;
-                    else if(b === 'mine') production = u.buildings[b] * 1 * hpMod;
-                    else if(b === 'quarry') production = u.buildings[b] * 2 * hpMod;
-                    else if(b === 'farm') production = u.buildings[b] * 5 * hpMod;
-                    else if(b === 'tower') production = u.buildings[b] * 0.5 * hpMod;
-                    
-                    u.resources[Object.keys(BUILDING_COSTS[b])[0]] += production * elapsed * mapBonus * u.boosts.gather; // Упрощенное начисление
-                }
-            }
-            // Восстанавливаем правильное начисление
-            u.resources.wood += u.buildings.woodcutter * 2 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.woodcutter / (BUILDING_COSTS.woodcutter.hp * u.buildings.woodcutter || 1));
-            u.resources.iron += u.buildings.mine * 1 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.mine / (BUILDING_COSTS.mine.hp * u.buildings.mine || 1));
-            u.resources.stone += u.buildings.quarry * 2 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.quarry / (BUILDING_COSTS.quarry.hp * u.buildings.quarry || 1));
-            u.resources.food += u.buildings.farm * 5 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.farm / (BUILDING_COSTS.farm.hp * u.buildings.farm || 1));
-            u.resources.mana += u.buildings.tower * 0.5 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.tower / (BUILDING_COSTS.tower.hp * u.buildings.tower || 1));
             
+            // Добыча с учетом HP зданий
+            u.resources.wood += u.buildings.woodcutter * 2 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.woodcutter || 0) / (BUILDING_COSTS.woodcutter.hp * u.buildings.woodcutter || 1));
+            u.resources.iron += u.buildings.mine * 1 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.mine || 0) / (BUILDING_COSTS.mine.hp * u.buildings.mine || 1));
+            u.resources.stone += u.buildings.quarry * 2 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.quarry || 0) / (BUILDING_COSTS.quarry.hp * u.buildings.quarry || 1));
+            u.resources.food += u.buildings.farm * 5 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.farm || 0) / (BUILDING_COSTS.farm.hp * u.buildings.farm || 1));
+            u.resources.mana += u.buildings.tower * 0.5 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.tower || 0) / (BUILDING_COSTS.tower.hp * u.buildings.tower || 1));
             u.lastUpdate = now; 
             
             if (u.construction && now >= u.construction.finishTime) { u.buildings[u.construction.building]++; u.buildingHp[u.construction.building] = BUILDING_COSTS[u.construction.building].hp * u.buildings[u.construction.building]; u.construction = null; }
             if (u.expedition && now >= u.expedition.finishTime) { u.resources.wood += 5000; u.resources.iron += 2000; u.resources.stone += 2000; u.glory += 20; u.expedition = null; }
-            if (u.tradeShip && now >= u.tradeShip.finishTime) { u.balance += u.tradeShip.reward; u.tradeShip = null; } // Морская торговля
+            if (u.tradeShip && now >= u.tradeShip.finishTime) { u.balance += u.tradeShip.reward; u.tradeShip = null; }
             
             saveDB(db);
             const userData = { ...u }; delete userData.passwordHash;
             return res.json({ success: true, user: userData, map: db.map, chat: db.chat.slice(-20) });
         }
 
+        // --- ЗАЩИЩЕННЫЕ ДЕЙСТВИЯ ---
         if (!username || !db.users[username]) return res.json({ success: false, error: 'Not authorized' });
         let u = db.users[username];
 
-        // Автодобыча (с учетом поломки)
+        // Автодобыча
         let elapsed = (now - u.lastUpdate) / 1000;
         let mapBonus = 1 + (db.map.filter(p => p.owner === username).reduce((acc, p) => acc + p.bonus, 0));
-        u.resources.wood += u.buildings.woodcutter * 2 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.woodcutter / (BUILDING_COSTS.woodcutter.hp * u.buildings.woodcutter || 1));
-        u.resources.iron += u.buildings.mine * 1 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.mine / (BUILDING_COSTS.mine.hp * u.buildings.mine || 1));
-        u.resources.stone += u.buildings.quarry * 2 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.quarry / (BUILDING_COSTS.quarry.hp * u.buildings.quarry || 1));
-        u.resources.food += u.buildings.farm * 5 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.farm / (BUILDING_COSTS.farm.hp * u.buildings.farm || 1));
-        u.resources.mana += u.buildings.tower * 0.5 * elapsed * mapBonus * u.boosts.gather * (u.buildingHp.tower / (BUILDING_COSTS.tower.hp * u.buildings.tower || 1));
+        u.resources.wood += u.buildings.woodcutter * 2 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.woodcutter || 0) / (BUILDING_COSTS.woodcutter.hp * u.buildings.woodcutter || 1));
+        u.resources.iron += u.buildings.mine * 1 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.mine || 0) / (BUILDING_COSTS.mine.hp * u.buildings.mine || 1));
+        u.resources.stone += u.buildings.quarry * 2 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.quarry || 0) / (BUILDING_COSTS.quarry.hp * u.buildings.quarry || 1));
+        u.resources.food += u.buildings.farm * 5 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.farm || 0) / (BUILDING_COSTS.farm.hp * u.buildings.farm || 1));
+        u.resources.mana += u.buildings.tower * 0.5 * elapsed * mapBonus * u.boosts.gather * ((u.buildingHp.tower || 0) / (BUILDING_COSTS.tower.hp * u.buildings.tower || 1));
         u.lastUpdate = now;
 
-        // Проверка таймеров
         if (u.construction && now >= u.construction.finishTime) { u.buildings[u.construction.building]++; u.buildingHp[u.construction.building] = BUILDING_COSTS[u.construction.building].hp * u.buildings[u.construction.building]; u.construction = null; }
         if (u.expedition && now >= u.expedition.finishTime) { u.resources.wood += 5000; u.resources.iron += 2000; u.resources.stone += 2000; u.glory += 20; u.expedition = null; }
         if (u.tradeShip && now >= u.tradeShip.finishTime) { u.balance += u.tradeShip.reward; u.tradeShip = null; }
 
-        // УЛУЧШЕНИЕ ЗДАНИЙ
+        // УЛУЧШЕНИЕ ЗДАНИЙ (С ПРОВЕРКОЙ ТРЕБОВАНИЙ РАТУШИ)
         if (action === 'upgrade') {
             const building = req.body.building;
             if (u.construction) return res.json({success:false, error:'Уже строится!'});
             const costs = BUILDING_COSTS[building]; if(!costs) return res.json({success:false, error:'Здание не найдено'});
+            
+            // ПРОВЕРКА ТРЕБОВАНИЙ
+            if(u.buildings.townhall < costs.reqTownhall) return res.json({success:false, error:`Нужна Ратуша уровня ${costs.reqTownhall}!`});
+            
             const mult = Math.pow(1.5, u.buildings[building]);
-            for(let r in costs) if(r !== 'time' && r !== 'hp' && (u.resources[r]||0) < costs[r]*mult) return res.json({success:false, error:`Не хватает ${r}!`});
-            for(let r in costs) if(r !== 'time' && r !== 'hp') u.resources[r] -= costs[r]*mult;
+            for(let r in costs) if(r !== 'time' && r !== 'hp' && r !== 'reqTownhall' && (u.resources[r]||0) < costs[r]*mult) return res.json({success:false, error:`Не хватает ${r}!`});
+            for(let r in costs) if(r !== 'time' && r !== 'hp' && r !== 'reqTownhall') u.resources[r] -= costs[r]*mult;
             const buildTime = (costs.time * mult) / (u.boosts.build || 1);
             u.construction = { building: building, finishTime: now + (buildTime * 1000) };
             saveDB(db); const userData={...u}; delete userData.passwordHash; return res.json({ success: true, user: userData });
         }
 
-        // РЕМОНТ ЗДАНИЙ (Сжигание ресурсов)
+        // РЕМОНТ
         if (action === 'repair') {
             const building = req.body.building;
             const maxHp = BUILDING_COSTS[building].hp * u.buildings[building];
-            const missingHp = maxHp - u.buildingHp[building];
+            const missingHp = maxHp - (u.buildingHp[building] || maxHp);
             if(missingHp <= 0) return res.json({success:false, error:'Не нуждается в ремонте'});
-            
             const costWood = missingHp * 5; const costStone = missingHp * 5;
             if(u.resources.wood < costWood || u.resources.stone < costStone) return res.json({success:false, error:'Нужно дерева и камня: ' + costWood});
             u.resources.wood -= costWood; u.resources.stone -= costStone;
@@ -166,108 +146,32 @@ module.exports = async (req, res) => {
             saveDB(db); const userData={...u}; delete userData.passwordHash; return res.json({ success: true, user: userData });
         }
 
-        // НАЕМ АРМИИ
-        if (action === 'recruit') {
-            let count = req.body.amount || 1; const unitType = req.body.unitType;
-            const unitCosts = { warriors: { food: 100, iron: 50 }, archers: { food: 80, wood: 100 }, cavalry: { food: 200, iron: 100, stone: 50 } };
-            const c = unitCosts[unitType]; if(!c) return res.json({success:false, error:'Тип не найден'});
-            for(let r in c) if(u.resources[r] < c[r]*count) return res.json({success:false, error:'Мало ресурсов!'});
-            for(let r in c) u.resources[r] -= c[r]*count;
-            u.army[unitType] += count;
-            saveDB(db); const userData={...u}; delete userData.passwordHash; return res.json({ success: true, user: userData });
-        }
+        if (action === 'recruit') { let c=req.body.amount||1;const ut=req.body.unitType;const uc={warriors:{food:100,iron:50},archers:{food:80,wood:100},cavalry:{food:200,iron:100,stone:50}};const cs=uc[ut];if(!cs)return res.json({success:false,error:'Тип не найден'});for(let r in cs)if(u.resources[r]<cs[r]*c)return res.json({success:false,error:'Мало ресурсов!'});for(let r in cs)u.resources[r]-=cs[r]*c;u.army[ut]+=c;saveDB(db);const ud={...u};delete ud.passwordHash;return res.json({success:true,user:ud}); }
 
-        // PVP РЕЙД (Теперь ломает здания)
-        if (action === 'raid') {
-            const targetUser = req.body.targetUser;
-            if (!db.users[targetUser]) return res.json({ success: false, error: 'Цель не найдена!' });
-            if(username === targetUser) return res.json({ success: false, error: 'Нельзя бить себя!' });
-            let atkPow = u.army.warriors*10 + u.army.archers*15 + u.army.cavalry*25;
-            if(atkPow === 0) return res.json({success:false, error:'Нет армии!'});
-            let t = db.users[targetUser];
-            let defPow = t.army.warriors*15 + t.army.archers*10 + t.army.cavalry*20;
-            if (atkPow > defPow) {
-                let stolen = {}; for(let r in u.resources) stolen[r] = Math.floor(t.resources[r] * 0.2);
-                for(let r in stolen) { t.resources[r] -= stolen[r]; u.resources[r] += stolen[r]; }
-                u.army.cavalry = Math.ceil(u.army.cavalry * 0.8); u.army.archers = Math.ceil(u.army.archers * 0.6); u.army.warriors = Math.ceil(u.army.warriors * 0.4);
-                t.army = { warriors: 0, archers: 0, cavalry: 0 }; u.glory += 10;
-                // Ломаем случайное здание цели
-                const bKeys = Object.keys(t.buildings).filter(k => t.buildings[k] > 0 && k !== 'townhall');
-                if(bKeys.length > 0) { const rndB = bKeys[Math.floor(Math.random() * bKeys.length)]; t.buildingHp[rndB] = Math.max(0, t.buildingHp[rndB] - 30); }
-                saveDB(db); const userData={...u}; delete userData.passwordHash; return res.json({ success: true, user: userData, stolen });
-            } else {
-                u.army = { warriors: 0, archers: 0, cavalry: 0 }; t.army.warriors += 10; t.glory += 10;
-                saveDB(db); return res.json({ success: false, error: 'Армия разбита!' });
-            }
-        }
+        if (action === 'raid') { const t=req.body.targetUser;if(!db.users[t])return res.json({success:false,error:'Цель не найдена!'});if(username===t)return res.json({success:false,error:'Себя бить нельзя!'});let ap=u.army.warriors*10+u.army.archers*15+u.army.cavalry*25;if(ap===0)return res.json({success:false,error:'Нет армии!'});let en=db.users[t];let dp=en.army.warriors*15+en.army.archers*10+en.army.cavalry*20;if(ap>dp){let s={};for(let r in u.resources)s[r]=Math.floor(en.resources[r]*0.2);for(let r in s){en.resources[r]-=s[r];u.resources[r]+=s[r];}u.army.cavalry=Math.ceil(u.army.cavalry*0.8);u.army.archers=Math.ceil(u.army.archers*0.6);u.army.warriors=Math.ceil(u.army.warriors*0.4);en.army={warriors:0,archers:0,cavalry:0};u.glory+=10;const bk=Object.keys(en.buildings).filter(k=>en.buildings[k]>0&&k!=='townhall');if(bk.length>0){const rb=bk[Math.floor(Math.random()*bk.length)];en.buildingHp[rb]=Math.max(0,en.buildingHp[rb]-30);}saveDB(db);const ud={...u};delete ud.passwordHash;return res.json({success:true,user:ud,stolen:s});}else{u.army={warriors:0,archers:0,cavalry:0};en.army.warriors+=10;en.glory+=10;saveDB(db);return res.json({success:false,error:'Армия разбита!'});} }
 
-        // МОРСКАЯ ТОРГОВЛЯ (Отправка корабля на 30 минут за GRC)
-        if (action === 'sendTradeShip') {
-            if(u.tradeShip) return res.json({success:false, error:'Корабль уже в плавании!'});
-            if(u.resources.wood < 2000 || u.resources.stone < 2000) return res.json({success:false, error:'Нужно 2000 дерева и 2000 камня'});
-            u.resources.wood -= 2000; u.resources.stone -= 2000;
-            u.tradeShip = { finishTime: now + 1800000, reward: 5 }; // 30 минут = 5 GRC
-            saveDB(db); const userData={...u}; delete userData.passwordHash; return res.json({ success: true, user: userData });
-        }
-
-        // ЭКСПЕДИЦИЯ В РУИНЫ (PvE - 1 час)
-        if (action === 'sendExpedition') {
-            let totalArmy = u.army.warriors + u.army.archers + u.army.cavalry;
-            if(totalArmy < 50) return res.json({success:false, error:'Нужно минимум 50 юнитов!'});
-            if(u.expedition) return res.json({success:false, error:'Уже в экспедиции!'});
-            u.expedition = { finishTime: now + 3600000 }; 
-            u.army.warriors = Math.ceil(u.army.warriors * 0.8); u.army.archers = Math.ceil(u.army.archers * 0.8); u.army.cavalry = Math.ceil(u.army.cavalry * 0.8);
-            saveDB(db); const userData={...u}; delete userData.passwordHash; return res.json({ success: true, user: userData });
-        }
-
-        // P2P РЫНОК 
-        if (action === 'sell') {
-            const resource = req.body.resource; const amount = req.body.amount; const pricePerUnit = parseFloat(req.body.pricePerUnit);
-            if (u.resources[resource] < amount) return res.json({ success: false, error: 'Мало ресов' });
-            u.resources[resource] -= amount;
-            db.orders.push({ id: Date.now(), seller: username, resource, amount, pricePerUnit, total: amount * pricePerUnit });
-            saveDB(db); const userData={...u}; delete userData.passwordHash; return res.json({ success: true, user: userData });
-        }
-        if (action === 'buy') {
-            const orderId = req.body.orderId;
-            const oi = db.orders.findIndex(o => o.id === orderId);
-            if (oi === -1) return res.json({ success: false, error: 'Ордер не найден' });
-            const o = db.orders[oi];
-            if (u.balance < o.total) return res.json({ success: false, error: 'Мало GRC!' });
-            db.users[o.seller].balance += o.total; 
-            u.balance -= o.total; u.resources[o.resource] += o.amount;
-            db.orders.splice(oi, 1);
-            saveDB(db); const userData={...u}; delete userData.passwordHash; return res.json({ success: true, user: userData });
-        }
+        if (action === 'sendTradeShip') { if(u.tradeShip)return res.json({success:false,error:'Корабль в пути'});if(u.resources.wood<2000||u.resources.stone<2000)return res.json({success:false,error:'Нужно 2000 дерева и камня'});u.resources.wood-=2000;u.resources.stone-=2000;u.tradeShip={finishTime:now+1800000,reward:5};saveDB(db);const ud={...u};delete ud.passwordHash;return res.json({success:true,user:ud}); }
+        if (action === 'sendExpedition') { let ta=u.army.warriors+u.army.archers+u.army.cavalry;if(ta<50)return res.json({success:false,error:'Нужно 50 юнитов'});if(u.expedition)return res.json({success:false,error:'Уже в экспедиции'});u.expedition={finishTime:now+3600000};u.army.warriors=Math.ceil(u.army.warriors*0.8);u.army.archers=Math.ceil(u.army.archers*0.8);u.army.cavalry=Math.ceil(u.army.cavalry*0.8);saveDB(db);const ud={...u};delete ud.passwordHash;return res.json({success:true,user:ud}); }
+        
+        // P2P РЫНОК
+        if (action === 'sell') { const r=req.body.resource,a=req.body.amount,p=parseFloat(req.body.pricePerUnit);if(u.resources[r]<a)return res.json({success:false,error:'Мало ресов'});u.resources[r]-=a;db.orders.push({id:Date.now(),seller:username,resource:r,amount:a,pricePerUnit:p,total:a*p});saveDB(db);const ud={...u};delete ud.passwordHash;return res.json({success:true,user:ud}); }
+        if (action === 'buy') { const oi=db.orders.findIndex(o=>o.id===req.body.orderId);if(oi===-1)return res.json({success:false,error:'Ордер не найден'});const o=db.orders[oi];if(u.balance<o.total)return res.json({success:false,error:'Мало GRC!'});db.users[o.seller].balance+=o.total;u.balance-=o.total;u.resources[o.resource]+=o.amount;db.orders.splice(oi,1);saveDB(db);const ud={...u};delete ud.passwordHash;return res.json({success:true,user:ud}); }
         if (action === 'getMarket') return res.json({ success: true, orders: db.orders });
 
-        // ПОПОЛНЕНИЕ БАЛАНСА (Переход на сайт FaucetPay)
+        // ПОПОЛНЕНИЕ (Генерация ссылки на официальный сайт FP)
         if (action === 'getDepositLink') {
-            // Формируем ссылку для оплаты на официальном сайте FaucetPay
+            if (!db.users[username]) return res.json({ success: false, error: 'User not found in DB' });
             const callbackUrl = `https://${req.headers.host}/api/game?action=fp_callback&secret=${FP_CALLBACK_SECRET}&custom_username=${username}`;
             const depositLink = `https://faucetpay.io/checkout?api_key=${FP_API_KEY}&currency=${FP_CURRENCY}&amount=1&callback=${encodeURIComponent(callbackUrl)}&custom_username=${username}`;
             return res.json({ success: true, link: depositLink });
         }
 
-        // ВЫВОД GRC В DOGE
-        if (action === 'withdraw') {
-            const wallet = req.body.wallet; const grcAmount = parseFloat(req.body.grcAmount);
-            if (u.balance < grcAmount) return res.json({ success: false, error: 'Мало GRC' });
-            const dogeAmount = grcAmount / WITHDRAW_RATE; 
-            if (dogeAmount < 1) return res.json({ success: false, error: `Минимальная сумма вывода: ${WITHDRAW_RATE} GRC (1 DOGE)` });
-            const fpRes = await axios.post('https://faucetpay.io/api/v1/send', null, {
-                params: { api_key: FP_API_KEY, amount: Math.floor(dogeAmount), to: wallet, currency: FP_CURRENCY }
-            });
-            if (fpRes.data.status === 200) {
-                u.balance -= grcAmount; saveDB(db);
-                const userData={...u}; delete userData.passwordHash;
-                return res.json({ success: true, user: userData, dogeSent: Math.floor(dogeAmount) });
-            } else return res.json({ success: false, error: fpRes.data.message });
-        }
+        // ВЫВОД
+        if (action === 'withdraw') { const w=req.body.wallet,ga=parseFloat(req.body.grcAmount);if(u.balance<ga)return res.json({success:false,error:'Мало GRC'});const da=ga/WITHDRAW_RATE;if(da<1)return res.json({success:false,error,`Мин ${WITHDRAW_RATE} GRC`});const fpRes=await axios.post('https://faucetpay.io/api/v1/send',null,{params:{api_key:FP_API_KEY,amount:Math.floor(da),to:w,currency:FP_CURRENCY}});if(fpRes.data.status===200){u.balance-=ga;saveDB(db);const ud={...u};delete ud.passwordHash;return res.json({success:true,user:ud,dogeSent:Math.floor(da)});}else return res.json({success:false,error:fpRes.data.message}); }
 
-        if (action === 'capturePost') { let p=db.map.find(p=>p.id===req.body.postId); if(!p)return res.json({success:false,error:'Пост не найден'}); let pw=u.army.warriors+u.army.archers*2+u.army.cavalry*3; if(pw<50)return res.json({success:false,error:'Мало армии'}); p.owner=username; u.army.warriors=Math.ceil(u.army.warriors*0.9);u.army.archers=Math.ceil(u.army.archers*0.9);u.army.cavalry=Math.ceil(u.army.cavalry*0.9); saveDB(db); const ud={...u};delete ud.passwordHash; return res.json({success:true,user:ud,map:db.map}); }
-        if (action === 'sendMessage') { db.chat.push({user:username,text:req.body.message,time:now}); if(db.chat.length>50)db.chat.shift(); saveDB(db); return res.json({success:true,chat:db.chat.slice(-20)}); }
-        if (action === 'sync') { saveDB(db); const ud={...u};delete ud.passwordHash; return res.json({ success: true, user: ud, map: db.map }); }
+        if (action === 'capturePost') { let p=db.map.find(p=>p.id===req.body.postId);if(!p)return res.json({success:false,error:'Пост не найден'});let pw=u.army.warriors+u.army.archers*2+u.army.cavalry*3;if(pw<50)return res.json({success:false,error:'Мало армии'});p.owner=username;u.army.warriors=Math.ceil(u.army.warriors*0.9);u.army.archers=Math.ceil(u.army.archers*0.9);u.army.cavalry=Math.ceil(u.army.cavalry*0.9);saveDB(db);const ud={...u};delete ud.passwordHash;return res.json({success:true,user:ud,map:db.map}); }
+        if (action === 'sendMessage') { db.chat.push({user:username,text:req.body.message,time:now});if(db.chat.length>50)db.chat.shift();saveDB(db);return res.json({success:true,chat:db.chat.slice(-20)}); }
+        if (action === 'sync') { saveDB(db);const ud={...u};delete ud.passwordHash;return res.json({success:true,user:ud,map:db.map}); }
 
         return res.json({ success: false, error: 'Invalid action' });
     } catch (error) { console.error(error); return res.status(500).json({ success: false, error: 'Server error' }); }
