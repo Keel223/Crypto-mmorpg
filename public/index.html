@@ -7,62 +7,135 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div id="login-screen" class="screen">
-        <h1>Crypto Strategy</h1>
+        <h1>🏰 Crypto Strategy</h1>
         <input type="text" id="username-input" placeholder="Введите никнейм">
-        <button onclick="login()">Войти</button>
+        <button onclick="login()">Войти в мир</button>
     </div>
 
-    <!-- ЭКРАН ИГРЫ -->
     <div id="game-screen" class="screen hidden">
         <header>
-            <h2>Добро пожаловать, <span id="user-name">Player</span>!</h2>
-            <div class="balance-box">Баланс: <span id="user-balance">0</span> GRC</div>
+            <h2>Игрок: <span id="user-name">Player</span> | Клан: <span id="user-clan">Нет</span></h2>
+            <div class="balance-box">💰 Баланс: <span id="user-balance">0</span> GRC</div>
         </header>
 
-        <div class="grid-container">
-            <!-- РЕСУРСЫ И ДОБЫЧА -->
-            <div class="panel">
-                <h3>Ресурсы и Добыча</h3>
-                <div id="resources-display">
-                    <p>🪵 Дерево: <span id="res-wood">0</span></p>
-                    <p>⛏️ Железо: <span id="res-iron">0</span></p>
-                    <p>🌾 Еда: <span id="res-food">0</span></p>
-                </div>
-                <button onclick="gatherResources()" class="btn-gather">Собрать добычу (+1 мин)</button>
-            </div>
+        <div class="res-bar">
+            <span>🪵 <span id="res-wood">0</span> (+<span id="inc-wood">0</span>/с)</span>
+            <span>⛏️ <span id="res-iron">0</span> (+<span id="inc-iron">0</span>/с)</span>
+            <span>🌾 <span id="res-food">0</span> (+<span id="inc-food">0</span>/с)</span>
+            <span>🪨 <span id="res-stone">0</span></span>
+            <span>🔮 <span id="res-mana">0</span> (+<span id="inc-mana">0</span>/с)</span>
+        </div>
 
-            <!-- P2P РЫНОК -->
-            <div class="panel">
-                <h3>P2P Рынок</h3>
-                <div class="sell-form">
-                    <select id="sell-resource">
-                        <option value="wood">Дерево</option>
-                        <option value="iron">Железо</option>
-                        <option value="food">Еда</option>
-                    </select>
-                    <input type="number" id="sell-amount" placeholder="Кол-во">
-                    <input type="number" id="sell-price" placeholder="Цена за 1 шт (GRC)">
-                    <button onclick="placeSellOrder()">Продать</button>
-                </div>
-                <h4>Книга ордеров (Купить)</h4>
-                <ul id="market-orders">
-                    <!-- Ордера будут тут -->
-                </ul>
-            </div>
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="switchTab('city')">Город</button>
+            <button class="tab-btn" onclick="switchTab('military')">Войско & Карта</button>
+            <button class="tab-btn" onclick="switchTab('market')">P2P Рынок</button>
+            <button class="tab-btn" onclick="switchTab('magic')">Магия & Магазин</button>
+            <button class="tab-btn" onclick="switchTab('social')">Клан & Чат</button>
+            <button class="tab-btn" onclick="switchTab('wallet')">Вывод 💸</button>
+        </nav>
 
-            <!-- ВЫВОД СРЕДСТВ -->
+        <!-- ВКЛАДКА ГОРОД -->
+        <div id="tab-city" class="tab-content active">
+            <div class="panel-grid">
+                <button onclick="upgrade('woodcutter')">Лесопилка (Ур. <span id="b-woodcutter">0</span>)</button>
+                <button onclick="upgrade('mine')">Шахта (Ур. <span id="b-mine">0</span>)</button>
+                <button onclick="upgrade('farm')">Ферма (Ур. <span id="b-farm">0</span>)</button>
+                <button onclick="upgrade('townhall')">Ратуша (Ур. <span id="b-townhall">1</span>)</button>
+                <button onclick="upgrade('barrack')">Казарма (Ур. <span id="b-barrack">0</span>)</button>
+                <button onclick="upgrade('archery')">Стрельбище (Ур. <span id="b-archery">0</span>)</button>
+                <button onclick="upgrade('stable')">Конюшня (Ур. <span id="b-stable">0</span>)</button>
+                <button onclick="upgrade('tower')">Башня Мага (Ур. <span id="b-tower">0</span>)</button>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА ВОЙСКО & КАРТА -->
+        <div id="tab-military" class="tab-content">
+            <div class="panel-grid">
+                <div class="panel">
+                    <h3>Найм юнитов</h3>
+                    <button onclick="recruit('warriors', 1)">⚔️ Мечник (100🌾 50⛏️)</button>
+                    <button onclick="recruit('archers', 1)">🏹 Лучник (80🌾 100🪵)</button>
+                    <button onclick="recruit('cavalry', 1)">🐎 Кавалерия (200🌾 100⛏️ 50🪨)</button>
+                    <p>Армия: ⚔️<span id="army-warriors">0</span> 🏹<span id="army-archers">0</span> 🐎<span id="army-cavalry">0</span></p>
+                </div>
+                <div class="panel">
+                    <h3>🔥 Рейд на игрока</h3>
+                    <input type="text" id="raid-target" placeholder="Никнейм цели">
+                    <button onclick="raid()" class="btn-danger">Атаковать!</button>
+                    <p id="raid-log" class="note"></p>
+                </div>
+            </div>
             <div class="panel">
-                <h3>FaucetPay Вывод</h3>
+                <h3>🗺️ Глобальная Карта (Захват дает бонус к добыче)</h3>
+                <div id="map-container" class="map-grid"></div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА P2P РЫНОК -->
+        <div id="tab-market" class="tab-content">
+            <div class="panel">
+                <h3>📈 Выставить на продажу</h3>
+                <select id="sell-resource">
+                    <option value="wood">Дерево</option><option value="iron">Железо</option><option value="food">Еда</option><option value="stone">Камень</option><option value="mana">Мана</option>
+                </select>
+                <input type="number" id="sell-amount" placeholder="Кол-во">
+                <input type="number" id="sell-price" placeholder="Цена за 1 шт (GRC)">
+                <button onclick="placeSellOrder()">Продать</button>
+            </div>
+            <div class="panel">
+                <h3>Книга ордеров</h3>
+                <ul id="market-orders"></ul>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА МАГИЯ & МАГАЗИН -->
+        <div id="tab-magic" class="tab-content">
+            <div class="panel-grid">
+                <div class="panel">
+                    <h3>🔮 Алхимия (Крафт за ману)</h3>
+                    <button onclick="craft('speed_gather')">Зелье добычи x2 (1 час) [50 Маны]</button>
+                    <button onclick="craft('speed_recruit')">Зелье найма x2 (1 час) [80 Маны]</button>
+                </div>
+                <div class="panel">
+                    <h3>👑 Премиум магазин (За GRC)</h3>
+                    <button onclick="buyPremium('vip1')">VIP Статус (Добыча x1.5) [10 GRC]</button>
+                    <button onclick="buyPremium('shield')">Щит от рейдов (24ч) [5 GRC]</button>
+                    <p class="note">Покупка сжигает GRC, поддерживая экономику!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА СОЦ -->
+        <div id="tab-social" class="tab-content">
+            <div class="panel-grid">
+                <div class="panel">
+                    <h3>🏰 Кланы</h3>
+                    <input type="text" id="clan-name-input" placeholder="Название клана">
+                    <button onclick="createClan()">Создать клан</button>
+                </div>
+                <div class="panel">
+                    <h3>💬 Общий чат</h3>
+                    <div id="chat-box"></div>
+                    <input type="text" id="chat-input" placeholder="Сообщение...">
+                    <button onclick="sendMessage()">Отправить</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА ВЫВОД -->
+        <div id="tab-wallet" class="tab-content">
+            <div class="panel">
+                <h3>💸 Вывод через FaucetPay</h3>
                 <input type="text" id="fp-wallet" placeholder="Ваш FaucetPay Email/Кошелек">
-                <input type="number" id="fp-amount" placeholder="Сумма вывода (GRC)">
-                <button onclick="withdrawFunds()">Вывести</button>
-                <p class="note">Комиссия рынка 5%. Вывод в DOGE.</p>
+                <input type="number" id="fp-amount" placeholder="Сумма (GRC)">
+                <button onclick="withdrawFunds()">Вывести DOGE</button>
+                <p class="note">Комиссия рынка 5%. Валюта вывода: DOGE.</p>
             </div>
         </div>
     </div>
 
     <script src="script.js"></script>
 </body>
-              </html>
+                </html>
