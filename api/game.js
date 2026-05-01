@@ -1,16 +1,20 @@
 const axios = require('axios');
 const crypto = require('crypto');
 
-// ВАШИ ДАННЫЕ ОТ UPSTASH
+// === НАСТРОЙКИ БАЗЫ ДАННЫХ UPSTASH ===
 const UPSTASH_URL = 'https://willing-cicada-111832.upstash.io/';
 const UPSTASH_TOKEN = 'gQAAAAAAAbTYAAIgcDE3OWExNWY2NTdkMTk0NDE1ODA3YzNiY2Y5OThkYTYwYg';
-// ---------------------------------
 
+// === НАСТРОЙКИ XROCKET ===
+const XROCKET_API_KEY = '37e361c1f41bdde2e63381737';
+// ВСТАВЬТЕ СЮДА ВАШУ ССЫЛКУ ИЗ VERCEL (Без слэша на конце!)
+const VERCEL_URL = 'https://crypto-strategia.vercel.app'; 
+
+// === НАСТРОЙКИ ВЫВОДА FAUCETPAY ===
 const FP_API_KEY = '6093864477e0ad75814f955d6d382665829b1912072310cbfcd17f6a499b77c9';
 const FP_CURRENCY = 'DOGE';
-const DEPOSIT_RATE = 1000;
-const WITHDRAW_RATE = 10000;
-const FP_CALLBACK_SECRET = 'MY_SUPER_SECRET_123';
+const DEPOSIT_RATE = 1000; // 1 DOGE = 1000 GRC
+const WITHDRAW_RATE = 10000; // 10000 GRC = 1 DOGE
 
 function hashPassword(password) { return crypto.createHash('sha256').update(password).digest('hex'); }
 
@@ -26,7 +30,6 @@ const BUILDING_COSTS = {
     forge:      { wood: 600,  stone: 600,  iron: 400, time: 40, hp: 120, req: 4 }
 };
 
-// Простая функция для работы с Upstash Redis
 async function redis(command, ...args) {
     const res = await axios.post(`${UPSTASH_URL}${command}/${args.join('/')}`, null, {
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
@@ -123,6 +126,7 @@ module.exports = async (req, res) => {
 
         processOfflineProgress(u, world, now);
 
+        // === ДЕЙСТВИЯ ИГРЫ ===
         if (action === 'upgrade') { const b=req.body.building;if(u.construction)return res.json({success:false,error:'Строится!'});const c=BUILDING_COSTS[b];if(!c)return res.json({success:false,error:'Не найдено'});if(u.buildings.townhall<c.req)return res.json({success:false,error:`Ратуша ${c.req} ур!`});const m=Math.pow(1.5,u.buildings[b]);for(let r in c)if(r!=='time'&&r!=='hp'&&r!=='req'&&(u.resources[r]||0)<c[r]*m)return res.json({success:false,error:`Мало ${r}!`});for(let r in c)if(r!=='time'&&r!=='hp'&&r!=='req')u.resources[r]-=c[r]*m;u.construction={building:b,finishTime:now+((c.time*m)/(u.boosts.build||1)*1000)}; }
         else if (action === 'repair') { const b=req.body.building;const mH=BUILDING_COSTS[b].hp*u.buildings[b];const mP=mH-(u.building_hp[b]||mH);if(mP<=0)return res.json({success:false,error:'Целое'});const cW=mP*5,cS=mP*5;if(u.resources.wood<cW||u.resources.stone<cS)return res.json({success:false,error:'Нужно '+cW+' дер/кам'});u.resources.wood-=cW;u.resources.stone-=cS;u.building_hp[b]=mH; }
         else if (action === 'recruit') { let c=req.body.amount||1;const ut=req.body.unitType;const uc={warriors:{food:100,iron:50},archers:{food:80,wood:100},cavalry:{food:200,iron:100,stone:50}};const cs=uc[ut];if(!cs)return res.json({success:false,error:'Тип не найден'});for(let r in cs)if(u.resources[r]<cs[r]*c)return res.json({success:false,error:'Мало ресурсов!'});for(let r in cs)u.resources[r]-=cs[r]*c;u.army[ut]+=c; }
@@ -148,8 +152,57 @@ module.exports = async (req, res) => {
         else if (action === 'sell') { const r=req.body.resource,a=req.body.amount,p=parseFloat(req.body.pricePerUnit);if(u.resources[r]<a)return res.json({success:false,error:'Мало ресов'});u.resources[r]-=a; const orderId = Date.now(); await redis('SET', `order:${orderId}`, JSON.stringify({id:orderId, seller:username, resource:r, amount:a, price_per_unit:p, total:a*p})); }
         else if (action === 'buy') { const oi=req.body.orderId; const oData = await redis('GET', `order:${oi}`); if(!oData) return res.json({success:false,error:'Ордер не найден'}); const o=JSON.parse(oData); if(u.balance<o.total) return res.json({success:false,error:'Мало GRC!'}); let tax=o.total*0.1; if(world.castle_owner){const coData = await redis('GET', `user:${world.castle_owner}`); if(coData){let co = JSON.parse(coData); co.balance+=tax; await redis('SET', `user:${world.castle_owner}`, JSON.stringify(co));}} u.balance-=o.total; const sData = await redis('GET', `user:${o.seller}`); if(sData){let s = JSON.parse(sData); s.balance+=(o.total-tax); await redis('SET', `user:${o.seller}`, JSON.stringify(s));} u.resources[o.resource]+=o.amount; await redis('DEL', `order:${oi}`); }
         else if (action === 'getMarket') { const keys = await redis('KEYS', 'order:*'); let orders = []; for(let k of keys) { const d = await redis('GET', k); if(d) orders.push(JSON.parse(d)); } await redis('SET', `user:${username}`, JSON.stringify(u)); return res.json({ success: true, orders }); }
-        else if (action === 'getDepositAddress') { try { const fpRes = await axios.get(`https://faucetpay.io/api/v1/getdepositaddress?api_key=${FP_API_KEY}&currency=${FP_CURRENCY}`); if(fpRes.data.status === 200) { await redis('SET', `user:${username}`, JSON.stringify(u)); return res.json({ success: true, address: fpRes.data.deposit_address }); } else return res.json({ success: false, error: 'Ошибка API FP' }); } catch(e) { return res.json({ success: false, error: 'Сервер FP недоступен' }); } }
+        
+        // === ПОПОЛНЕНИЕ ЧЕРЕЗ XROCKET (от 1 DOGE) ===
+        else if (action === 'getDepositAddress') { 
+            try { 
+                const xrRes = await axios.post('https://api.xrocket.tg/pay/invoice', {
+                    amount: 1, // Минимум 1 DOGE
+                    currency: 'DOGE',
+                    description: `Deposit for ${username}`,
+                    hidden_message: `user:${username}`,
+                    callback_url: `${VERCEL_URL}/api/game?action=xr_callback` 
+                }, {
+                    headers: { 'Authorization': `Bearer ${XROCKET_API_KEY}` }
+                });
+
+                if(xrRes.data && xrRes.data.success) { 
+                    await redis('SET', `user:${username}`, JSON.stringify(u));
+                    return res.json({ 
+                        success: true, 
+                        address: xrRes.data.data.address, 
+                        min_amount: 1,
+                        currency: 'DOGE' 
+                    }); 
+                } else return res.json({ success: false, error: 'Ошибка xRocket API' }); 
+            } catch(e) { 
+                console.error('xRocket Error:', e.response?.data || e.message);
+                return res.json({ success: false, error: 'Сервер xRocket недоступен' }); 
+            } 
+        }
+        // ВЕБХУК XROCKET (Автоматическое начисление)
+        else if (isGet && action === 'xr_callback') {
+            if (body.status === 'paid') {
+                const amount = body.amount;
+                const hiddenMsg = body.hidden_message;
+                const targetUser = hiddenMsg ? hiddenMsg.replace('user:', '').toLowerCase().trim() : null;
+                
+                if (targetUser && amount) {
+                    const uData = await redis('GET', `user:${targetUser}`);
+                    if (uData) {
+                        let u = JSON.parse(uData);
+                        const grcAmount = parseFloat(amount) * DEPOSIT_RATE; // 1 DOGE = 1000 GRC
+                        u.balance += grcAmount;
+                        await redis('SET', `user:${targetUser}`, JSON.stringify(u));
+                    }
+                }
+            }
+            return res.status(200).send('OK');
+        }
+
+        // ВЫВОД (FaucetPay)
         else if (action === 'withdraw') { const w=req.body.wallet,ga=parseFloat(req.body.grcAmount);if(u.balance<ga)return res.json({success:false,error:'Мало GRC'});const da=ga/WITHDRAW_RATE;if(da<1)return res.json({success:false,error:`Мин ${WITHDRAW_RATE} GRC`});try{const fpRes=await axios.post('https://faucetpay.io/api/v1/send',null,{params:{api_key:FP_API_KEY,amount:Math.floor(da),to:w,currency:FP_CURRENCY}});if(fpRes.data.status===200){u.balance-=ga; await redis('SET', `user:${username}`, JSON.stringify(u)); const ud={...u};delete ud.password_hash;return res.json({success:true,user:ud,dogeSent:Math.floor(da)});}else return res.json({success:false,error:fpRes.data.message});}catch(e){return res.json({success:false,error:'Ошибка сети FP'});} }
+        
         else if (action === 'capturePost') { let p=world.map.find(p=>p.id===req.body.postId);if(!p)return res.json({success:false,error:'Пост не найден'});let pw=u.army.warriors+u.army.archers*2+u.army.cavalry*3;if(pw<50)return res.json({success:false,error:'Мало армии'});p.owner=username;u.army.warriors=Math.ceil(u.army.warriors*0.9);u.army.archers=Math.ceil(u.army.archers*0.9);u.army.cavalry=Math.ceil(u.army.cavalry*0.9); await redis('SET', 'world:main', JSON.stringify(world)); }
         else if (action === 'getLeaderboard') { const keys = await redis('KEYS', 'user:*'); let users = []; for(let k of keys) { const d = await redis('GET', k); if(d) { const usr = JSON.parse(d); users.push({username: usr.username, glory: usr.glory}); } } users.sort((a,b)=>b.glory-a.glory); await redis('SET', `user:${username}`, JSON.stringify(u)); return res.json({ success: true, leaderboard: users.slice(0, 10) }); }
         else if (action === 'sync') { await redis('SET', `user:${username}`, JSON.stringify(u)); delete u.password_hash; return res.json({ success: true, user: u, map: world.map, castleOwner: world.castle_owner, chaosEventEnd: world.chaos_event_end || 0 }); }
