@@ -1,48 +1,191 @@
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f0f17; color: #eee; margin: 0; padding: 0; }
-.screen { max-width: 1000px; margin: 0 auto; padding: 20px; }
-.hidden { display: none; }
-h1, h2, h3 { color: #ffc107; text-shadow: 1px 1px 2px black; margin-top:0; }
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Empire P2P</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
+    <div id="login-screen" class="screen">
+        <h1>🏰 Crypto Empire</h1>
+        <p class="note">GRC добывается только торговлей с игроками или пополнением!</p>
+        <input type="text" id="username-input" placeholder="Логин">
+        <input type="password" id="password-input" placeholder="Пароль">
+        <button onclick="login()">Войти</button>
+        <button onclick="register()" class="btn-secondary">Зарегистрироваться</button>
+    </div>
 
-input, select, button { padding: 10px; margin: 5px 0; border: none; border-radius: 5px; width: 100%; box-sizing: border-box; font-size: 14px; }
-input, select { background: #1a1a2e; color: white; border: 1px solid #333; }
-button { background: #28a745; color: white; cursor: pointer; font-weight: bold; transition: 0.2s; }
-button:hover { filter: brightness(1.2); }
-button:disabled { background: #444; cursor: not-allowed; }
-.btn-danger { background: #dc3545; }
-.btn-secondary { background: #007bff; }
+    <!-- ОСНОВНОЙ ЭКРАН ИГРЫ -->
+    <div id="game-screen" class="screen hidden">
+        <header>
+            <h2>Игрок: <span id="user-name">Player</span></h2>
+            <div class="balance-box">💰 <span id="user-balance">0.0000</span> GRC</div>
+        </header>
 
-header { display: flex; justify-content: space-between; align-items: center; background: #1a1a2e; padding: 15px; border-radius: 8px; border: 2px solid #ffc107; margin-bottom: 10px; }
-.balance-box { font-size: 1.3rem; color: #4ecca3; font-weight: bold; }
+        <div class="res-bar">
+            <span>🪵 <span id="res-wood">0</span></span>
+            <span>⛏️ <span id="res-iron">0</span></span>
+            <span>🪨 <span id="res-stone">0</span></span>
+            <span>🌾 <span id="res-food">0</span></span>
+            <span>🔮 <span id="res-mana">0</span></span>
+        </div>
 
-.res-bar { display: flex; justify-content: space-around; background: #1a1a2e; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-weight: bold; border: 1px solid #333; font-size: 15px; }
+        <div class="construction-bar" id="con-bar" style="display:none;">🏗️ <span id="con-text"></span></div>
+        <div class="construction-bar" id="exp-bar" style="display:none; background:#1a332b; border-color:#28a745;">🗺️ <span id="exp-text"></span></div>
 
-.construction-bar { background: #1a1a2e; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-weight: bold; border: 1px solid #007bff; color: #007bff; text-align: center; font-size: 14px; }
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="switchTab('city')">Город</button>
+            <button class="tab-btn" onclick="switchTab('military')">Войско</button>
+            <button class="tab-btn" onclick="switchTab('magic')">Магия & GRC</button>
+            <button class="tab-btn" onclick="switchTab('market')">P2P Рынок</button>
+            <button class="tab-btn" onclick="switchTab('wallet')">Банк 💸</button>
+        </nav>
 
-.tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
-.tab-btn { background: #1a1a2e; border: 1px solid #333; flex: 1; min-width: 80px; color: #aaa; }
-.tab-btn.active { background: #ffc107; color: #000; border-color: #ffc107; }
+        <!-- ВКЛАДКА ГОРОД -->
+        <div id="tab-city" class="tab-content active">
+            <div class="panel-grid" id="buildings-grid"></div>
+        </div>
 
-.tab-content { display: none; }
-.tab-content.active { display: block; animation: fadeIn 0.3s; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        <!-- ВКЛАДКА ВОЙСКО & КАРТА -->
+        <div id="tab-military" class="tab-content">
+            <div class="panel-grid">
+                <div class="panel">
+                    <h3>Найм армии</h3>
+                    <div class="btn-group">
+                        <button onclick="recruit('warriors', 1)">⚔️ Мечник</button>
+                        <button onclick="recruit('archers', 1)">🏹 Лучник</button>
+                        <button onclick="recruit('cavalry', 1)">🐎 Кавалерия</button>
+                    </div>
+                    <div class="stat-box">
+                        <p>⚔️ <span id="army-warriors">0</span> | 🏹 <span id="army-archers">0</span> | 🐎 <span id="army-cavalry">0</span></p>
+                        <p>🔨 Кузница: <span id="forge-lvl">0</span> ур.</p>
+                    </div>
+                    <button onclick="upgradeArmy()" class="btn-secondary" style="margin-top:10px;">Улучшить армию (GRC)</button>
+                </div>
+                <div class="panel">
+                    <h3>🛡️ Защита базы</h3>
+                    <p>Щит от рейдов: <span id="shield-status" style="font-weight:bold;">❌ Нет</span></p>
+                    <button onclick="buyShield()" class="btn-danger">Купить Щит (20 GRC / 24ч)</button>
+                </div>
+            </div>
+            
+            <div class="panel-grid" style="margin-top:15px;">
+                 <div class="panel">
+                    <h3>🎯 Точечный Рейд</h3>
+                    <input type="text" id="raid-target" placeholder="Никнейм цели">
+                    <button onclick="raid()" class="btn-danger">Атаковать!</button>
+                    <p id="raid-log" class="note"></p>
+                 </div>
+                 <div class="panel">
+                    <h3>⚔️ Случайный бой / Руины</h3>
+                    <button onclick="findPvp()" class="btn-danger">Найти противника (PvP)</button>
+                    <p id="pvp-log" class="note"></p>
+                    <button onclick="sendExpedition()" style="margin-top:15px; background:#17a2b8;">🗺️ В Руины (1 час)</button>
+                 </div>
+            </div>
 
-.panel { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-.panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
-.btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+            <div class="panel" style="margin-top:15px; border-color: #ffc107;">
+                <h3>🏰 Великий Замок (Владыка: <span id="castle-owner" style="color:#ffc107; font-weight:bold;">Нет</span>)</h3>
+                <p class="note">Владыка получает 10% налога со ВСЕХ сделок на рынке! Для осады нужно 5000 силы. Потери: 50% армии.</p>
+                <button onclick="siegeCastle()" class="btn-danger">Осадить Замок!</button>
+            </div>
 
-.stat-box { background: #000; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; border: 1px dashed #444; }
-.cost-display { font-size: 0.85rem; color: #aaa; min-height: 40px; margin-bottom: 10px; line-height: 1.4; }
+            <div class="panel" style="margin-top:15px;">
+                <h3>🗺️ Карта Аванпостов</h3>
+                <div id="map-container" class="map-grid"></div>
+            </div>
 
-.hp-bar-container { width: 100%; background: #333; border-radius: 3px; margin-bottom: 5px; height: 8px; }
-.hp-bar { height: 100%; border-radius: 3px; transition: width 0.3s; }
+            <div class="panel" style="margin-top:15px;">
+                <h3>🏆 Рейтинг Славы</h3>
+                <button onclick="getLeaderboard()">Обновить рейтинг</button>
+                <ul id="leaderboard-list"></ul>
+            </div>
+        </div>
 
-ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; background: #000; padding: 10px; border-radius: 5px; font-size: 0.9rem; text-align: left; }
-li { background: #1a1a2e; padding: 10px; margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; border: 1px solid #333; }
-.buy-btn { background: #007bff; width: auto; padding: 5px 15px; margin: 0; border-radius: 3px; }
+        <!-- ВКЛАДКА МАГИЯ & ГЕРОИ -->
+        <div id="tab-magic" class="tab-content">
+            <div class="panel-grid">
+                <div class="panel">
+                    <h3>🧙 Наём Героев (За GRC)</h3>
+                    <p>Ваш герой: <span id="hero-name" style="color:#4ecca3; font-weight:bold;">Нет</span></p>
+                    <button onclick="buyHero('miner')">🧙 Шахтер (50 GRC / +50% добычи)</button>
+                    <button onclick="buyHero('general')" style="margin-top:10px;">⚔️ Генерал (50 GRC / +20% атаки)</button>
+                </div>
+                <div class="panel">
+                    <h3>💍 Кольца Всевластия (За GRC)</h3>
+                    <p class="note">Слоты колец (макс. 5 шт). Сжигают GRC навсегда!</p>
+                    <p>💍 Добычи: <span id="rings-gather">0</span>/5 | ⚔️ Атаки: <span id="rings-attack">0</span>/5</p>
+                    <button onclick="buyRing('gather')">💍 Кольцо Добычи (200 GRC / +5%)</button>
+                    <button onclick="buyRing('attack')" style="margin-top:10px;">💍 Кольцо Атаки (200 GRC / +5%)</button>
+                </div>
+                <div class="panel">
+                    <h3>⚖️ Черный Рынок (Слив GRC)</h3>
+                    <p class="note">Покупка ресурсов у системы. Сжигает GRC!</p>
+                    <button onclick="blackMarket('wood')">💰 100 GRC ➡️ 10000 🪵</button>
+                    <button onclick="blackMarket('iron')" style="margin-top:10px;">💰 100 GRC ➡️ 5000 ⛏️</button>
+                    <button onclick="blackMarket('stone')" style="margin-top:10px;">💰 100 GRC ➡️ 5000 🪨</button>
+                </div>
+                <div class="panel">
+                    <h3>🌪️ Вихрь Хаоса</h3>
+                    <p class="note">ЗАПЛАТИТЕ 500 GRC, чтобы удвоить добычу ВСЕМ на сервере на 1 час!</p>
+                    <button onclick="triggerChaos()" class="btn-danger">Активировать Вихрь</button>
+                </div>
+                <div class="panel">
+                    <h3>⚗️ Алхимия (Обмен ресурсов)</h3>
+                    <button onclick="alchemy('wood_to_stone')">🔄 500 🪵 ➡️ 200 🪨</button>
+                    <button onclick="alchemy('food_to_iron')" style="margin-top:10px;">🔄 500 🌾 ➡️ 200 ⛏️</button>
+                </div>
+            </div>
+        </div>
 
-.map-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-.map-post { background: #1a1a2e; padding: 15px; text-align: center; border-radius: 5px; border: 2px solid #444; cursor: pointer; font-size: 12px; transition: 0.2s; }
-.map-post:hover { border-color: #ffc107; }
-.map-post.owned { border-color: #28a745; background: #0d3017; }
+        <!-- ВКЛАДКА P2P РЫНОК -->
+        <div id="tab-market" class="tab-content">
+            <div class="panel">
+                <h3>📈 Продать ресурсы за GRC</h3>
+                <p class="note">Налог Владыке Замка: 10%.</p>
+                <select id="sell-resource">
+                    <option value="wood">🪵 Дерево</option>
+                    <option value="iron">⛏️ Железо</option>
+                    <option value="stone">🪨 Камень</option>
+                    <option value="food">🌾 Еда</option>
+                </select>
+                <input type="number" id="sell-amount" placeholder="Количество">
+                <input type="number" id="sell-price" step="any" placeholder="Цена за 1 шт (GRC)">
+                <button onclick="placeSellOrder()">Выставить на продажу</button>
+            </div>
+            <div class="panel">
+                <h3>🛒 Покупка за GRC</h3>
+                <ul id="market-orders"></ul>
+            </div>
+        </div>
 
-.note { font-size: 0.85rem; color: #aaa; margin-top: 10px; }
+        <!-- ВКЛАДКА БАНК -->
+        <div id="tab-wallet" class="tab-content">
+            <div class="panel-grid">
+                <div class="panel">
+                    <h3>📥 Пополнить баланс</h3>
+                    <p class="note">Курс: 1 DOGE = 1000 GRC</p>
+                    <button onclick="depositFaucetPay()" class="btn-secondary">Получить адрес пополнения</button>
+                    <div id="deposit-address-box" style="display:none; margin-top:15px; background:#000; padding:15px; border-radius:8px; text-align:center;">
+                        <p style="color:#4ecca3; margin-bottom:10px;">Отправьте DOGE на этот адрес:</p>
+                        <span id="deposit-address-text" style="color:#ffc107; font-size:14px; word-wrap:break-word; font-weight:bold;"></span>
+                        <p class="note" style="margin-top:15px;">Средства зачислятся автоматически.</p>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3>💸 Вывод в DOGE</h3>
+                    <p class="note">Курс: 10000 GRC = 1 DOGE. Мин: 10000.</p>
+                    <input type="text" id="fp-wallet" placeholder="FaucetPay Email / Кошелек">
+                    <input type="number" id="fp-amount" placeholder="Сумма вывода (GRC)">
+                    <button onclick="withdrawFunds()">Вывести DOGE</button>
+                    <p id="withdraw-log" class="note"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+  </html>
