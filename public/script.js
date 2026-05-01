@@ -1,5 +1,5 @@
 // ВСТАВЬТЕ СЮДА ССЫЛКУ НА ВАШ ВЕРСЕЛ СЕРВЕР!
-const API_URL = 'https://crypto-mmorpg.vercel.app/api/game'; 
+const API_URL = '/api/game'; 
 let currentUser = null;
 
 const RES_NAMES = { wood: '🪵Дерево', stone: '🪨Камень', iron: '⛏️Железо', food: '🌾Еда', mana: '🔮Мана' };
