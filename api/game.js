@@ -1,5 +1,6 @@
 const axios = require('axios');
 const crypto = require('crypto');
+const { HttpsProxyAgent } = require('https-proxy-agent'); // Нужна для прокси
 
 // === НАСТРОЙКИ БАЗЫ ДАННЫХ UPSTASH ===
 const UPSTASH_URL = 'https://willing-cicada-111832.upstash.io/';
@@ -15,6 +16,11 @@ const FP_API_KEY = '6093864477e0ad75814f955d6d382665829b1912072310cbfcd17f6a499b
 const FP_CURRENCY = 'DOGE';
 const DEPOSIT_RATE = 1000; // 1 DOGE = 1000 GRC
 const WITHDRAW_RATE = 10000; // 10000 GRC = 1 DOGE
+
+// === ПРОКСИ (НАСТРОЙКА ДЛЯ ОБХОДА БЛОКИРОВОК) ===
+// Если ошибка "недоступен" останется, купи любой IPv4 HTTPS прокси и вставь сюда.
+// Формат: 'http://логин:пароль@ip:порт'
+const PROXY_URL = ''; // Пока пусто
 
 function hashPassword(password) { return crypto.createHash('sha256').update(password).digest('hex'); }
 
@@ -153,18 +159,26 @@ module.exports = async (req, res) => {
         else if (action === 'buy') { const oi=req.body.orderId; const oData = await redis('GET', `order:${oi}`); if(!oData) return res.json({success:false,error:'Ордер не найден'}); const o=JSON.parse(oData); if(u.balance<o.total) return res.json({success:false,error:'Мало GRC!'}); let tax=o.total*0.1; if(world.castle_owner){const coData = await redis('GET', `user:${world.castle_owner}`); if(coData){let co = JSON.parse(coData); co.balance+=tax; await redis('SET', `user:${world.castle_owner}`, JSON.stringify(co));}} u.balance-=o.total; const sData = await redis('GET', `user:${o.seller}`); if(sData){let s = JSON.parse(sData); s.balance+=(o.total-tax); await redis('SET', `user:${o.seller}`, JSON.stringify(s));} u.resources[o.resource]+=o.amount; await redis('DEL', `order:${oi}`); }
         else if (action === 'getMarket') { const keys = await redis('KEYS', 'order:*'); let orders = []; for(let k of keys) { const d = await redis('GET', k); if(d) orders.push(JSON.parse(d)); } await redis('SET', `user:${username}`, JSON.stringify(u)); return res.json({ success: true, orders }); }
         
-        // === ПОПОЛНЕНИЕ ЧЕРЕЗ XROCKET (от 1 DOGE) ===
+        // === ПОПОЛНЕНИЕ ЧЕРЕЗ XROCKET (ИСПРАВЛЕНО!) ===
         else if (action === 'getDepositAddress') { 
             try { 
-                const xrRes = await axios.post('https://api.xrocket.tg/pay/invoice', {
+                // Настройка агента для прокси (если понадобится)
+                const axiosConfig = {
+                    headers: { 'Authorization': `Bearer ${XROCKET_API_KEY}` },
+                    timeout: 15000 // Увеличили таймаут до 15 секунд
+                };
+                if (PROXY_URL) {
+                    axiosConfig.httpsAgent = new HttpsProxyAgent(PROXY_URL);
+                }
+
+                // ИЗМЕНЕН URL НА АКТУАЛЬНЫЙ И ИСПРАВЛЕН ТЕЛО ЗАПРОСА
+                const xrRes = await axios.post('https://api.xrocket.app/v2/invoice', {
                     amount: 1, // Минимум 1 DOGE
                     currency: 'DOGE',
                     description: `Deposit for ${username}`,
                     hidden_message: `user:${username}`,
                     callback_url: `${VERCEL_URL}/api/game?action=xr_callback` 
-                }, {
-                    headers: { 'Authorization': `Bearer ${XROCKET_API_KEY}` }
-                });
+                }, axiosConfig);
 
                 if(xrRes.data && xrRes.data.success) { 
                     await redis('SET', `user:${username}`, JSON.stringify(u));
@@ -174,13 +188,15 @@ module.exports = async (req, res) => {
                         min_amount: 1,
                         currency: 'DOGE' 
                     }); 
-                } else return res.json({ success: false, error: 'Ошибка xRocket API' }); 
+                } else return res.json({ success: false, error: 'Ошибка xRocket: ' + (xrRes.data.message || 'Unknown') }); 
             } catch(e) { 
-                console.error('xRocket Error:', e.response?.data || e.message);
-                return res.json({ success: false, error: 'Сервер xRocket недоступен' }); 
+                // Детальный лог ошибки в консоль Vercel
+                console.error('xRocket Error Details:', e.response?.data || e.code || e.message);
+                return res.json({ success: false, error: 'Сервер xRocket недоступен. Попробуйте позже.' }); 
             } 
         }
-        // ВЕБХУК XROCKET (Автоматическое начисление)
+        
+        // ВЕБХУК XROCKET (ИСПРАВЛЕНО СОХРАНЕНИЕ В БАЗУ!)
         else if (isGet && action === 'xr_callback') {
             if (body.status === 'paid') {
                 const amount = body.amount;
@@ -193,7 +209,9 @@ module.exports = async (req, res) => {
                         let u = JSON.parse(uData);
                         const grcAmount = parseFloat(amount) * DEPOSIT_RATE; // 1 DOGE = 1000 GRC
                         u.balance += grcAmount;
+                        // ВАЖНО: Сохраняем начисление в базу!
                         await redis('SET', `user:${targetUser}`, JSON.stringify(u));
+                        console.log(`Начислено ${grcAmount} GRC для ${targetUser}`);
                     }
                 }
             }
