@@ -9,7 +9,14 @@ const FP_CALLBACK_SECRET = 'MY_SUPER_SECRET_123'; // ПОМЕНЯЙТЕ!
 
 const SUPABASE_URL = 'https://zslzsaofywjrvahjhkmc.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzbHpzYW9meXdqcnZhaGpoa21jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzU4OTc4NiwiZXhwIjoyMDkzMTY1Nzg2fQ.xIvhixZ7e5ki9Bb1RLy5SCU34yhzTTuD2-Cumhnje0c';
-const sbHeaders = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+// ИСПРАВЛЕНО: Добавлен Accept-Profile для корректной работы ilike фильтров
+const sbHeaders = { 
+    'apikey': SUPABASE_KEY, 
+    'Authorization': `Bearer ${SUPABASE_KEY}`, 
+    'Content-Type': 'application/json', 
+    'Prefer': 'return=representation',
+    'Accept-Profile': 'public'
+};
 
 function hashPassword(password) { return crypto.createHash('sha256').update(password).digest('hex'); }
 
@@ -92,10 +99,11 @@ module.exports = async (req, res) => {
         if (isGet && action === 'fp_callback') {
             const { custom_username, amount, currency, secret } = body;
             if (secret !== FP_CALLBACK_SECRET || currency !== FP_CURRENCY) return res.status(403).send('Invalid');
-            const uArr = await sbFetch('users', 'GET', null, `?username=eq.${custom_username}`);
+            // ИСПРАВЛЕНО: ilike вместо eq
+            const uArr = await sbFetch('users', 'GET', null, `?username=ilike.${custom_username}`);
             if (uArr && uArr.length > 0) { 
                 const newBal = uArr[0].balance + (parseFloat(amount) * DEPOSIT_RATE);
-                await sbFetch('users', 'PATCH', { balance: newBal }, `?username=eq.${custom_username}`);
+                await sbFetch('users', 'PATCH', { balance: newBal }, `?username=ilike.${custom_username}`);
                 return res.status(200).send('OK'); 
             }
             return res.status(404).send('User not found');
@@ -104,7 +112,8 @@ module.exports = async (req, res) => {
         // РЕГИСТРАЦИЯ
         if (action === 'register') {
             if (!username || !password) return res.json({ success: false, error: 'Введите логин и пароль' });
-            const exist = await sbFetch('users', 'GET', null, `?username=eq.${username}`);
+            // ИСПРАВЛЕНО: ilike вместо eq
+            const exist = await sbFetch('users', 'GET', null, `?username=ilike.${username}`);
             if (exist && exist.length > 0) return res.json({ success: false, error: 'Такой игрок уже есть' });
             const newUser = {
                 username, password_hash: hashPassword(password), balance: 0, glory: 0, 
@@ -121,10 +130,19 @@ module.exports = async (req, res) => {
         // АВТОРИЗАЦИЯ
         if (action === 'login') {
             if (!username || !password) return res.json({ success: false, error: 'Введите данные' });
-            const uArr = await sbFetch('users', 'GET', null, `?username=eq.${username}`);
-            if (!uArr || uArr.length === 0 || uArr[0].password_hash !== hashPassword(password)) return res.json({ success: false, error: 'Неверный логин или пароль' });
-            let u = uArr[0];
+            // ИСПРАВЛЕНО: ilike вместо eq
+            const uArr = await sbFetch('users', 'GET', null, `?username=ilike.${username}`);
             
+            // ИСПРАВЛЕНО: Безопасная проверка, чтобы сервер не падал с 500 ошибкой
+            if (!uArr || uArr.length === 0) {
+                return res.json({ success: false, error: 'Неверный логин или пароль' });
+            }
+            
+            const u = uArr[0];
+            if (u.password_hash !== hashPassword(password)) {
+                return res.json({ success: false, error: 'Неверный логин или пароль' });
+            }
+
             let worldArr = await sbFetch('world', 'GET', null, `?id=eq.main`);
             let world = (worldArr && worldArr.length > 0) ? worldArr[0] : { map: [], castle_owner: null, chaos_event_end: 0 };
             
@@ -138,7 +156,8 @@ module.exports = async (req, res) => {
             processOfflineProgress(u, world, now); // Применяем оффлайн прогресс
             
             let updateData = { resources: u.resources, last_update: u.last_update, buildings: u.buildings, building_hp: u.building_hp, construction: u.construction, expedition: u.expedition, rings: u.rings };
-            await sbFetch('users', 'PATCH', updateData, `?username=eq.${username}`);
+            // ИСПРАВЛЕНО: ilike вместо eq
+            await sbFetch('users', 'PATCH', updateData, `?username=ilike.${username}`);
             
             const userData = { ...u }; delete userData.password_hash; delete userData.id;
             return res.json({ success: true, user: userData, map: world.map, castleOwner: world.castle_owner, chaosEventEnd: world.chaos_event_end });
@@ -146,7 +165,8 @@ module.exports = async (req, res) => {
 
         // ЗАЩИЩЕННЫЕ ДЕЙСТВИЯ
         if (!username) return res.json({ success: false, error: 'Not authorized' });
-        let uArr = await sbFetch('users', 'GET', null, `?username=eq.${username}`);
+        // ИСПРАВЛЕНО: ilike вместо eq
+        let uArr = await sbFetch('users', 'GET', null, `?username=ilike.${username}`);
         if (!uArr || uArr.length === 0) return res.json({ success: false, error: 'User not found' });
         let u = uArr[0];
         
@@ -233,16 +253,17 @@ module.exports = async (req, res) => {
         else if (action === 'siegeCastle') { 
             let ap=u.army.warriors*10+u.army.archers*15+u.army.cavalry*25; 
             if(ap < 5000) return res.json({success:false,error:'Нужно 5000 силы!'}); 
-            if(world.castle_owner === username) return res.json({success:false,error:'Вы уже Владыка!'}); 
-            world.castle_owner = username; 
+            if(world.castle_owner === u.username) return res.json({success:false,error:'Вы уже Владыка!'}); 
+            world.castle_owner = u.username; 
             u.army.warriors = Math.ceil(u.army.warriors * 0.5); u.army.archers = Math.ceil(u.army.archers * 0.5); u.army.cavalry = Math.ceil(u.army.cavalry * 0.5); u.glory += 100; 
             await sbFetch('world', 'PATCH', { castle_owner: world.castle_owner }, `?id=eq.main`); 
             updateData = {...updateData, army: u.army, glory: u.glory}; 
         }
         else if (action === 'raid') { 
             const t=req.body.targetUser;
-            if(t===username) return res.json({success:false,error:'Себя бить нельзя!'});
-            let enArr=await sbFetch('users', 'GET', null, `?username=eq.${t}`); 
+            if(t.toLowerCase()===u.username.toLowerCase()) return res.json({success:false,error:'Себя бить нельзя!'});
+            // ИСПРАВЛЕНО: ilike вместо eq
+            let enArr=await sbFetch('users', 'GET', null, `?username=ilike.${t}`); 
             if(!enArr||enArr.length===0) return res.json({success:false,error:'Цель не найдена!'}); 
             let en=enArr[0]; 
             if(en.shield > now) return res.json({success:false,error:'У цели Щит!'}); 
@@ -261,11 +282,13 @@ module.exports = async (req, res) => {
                 en.army={warriors:0,archers:0,cavalry:0};u.glory+=10;
                 const bk=Object.keys(en.buildings).filter(k=>en.buildings[k]>0&&k!=='townhall');
                 if(bk.length>0){const rb=bk[Math.floor(Math.random()*bk.length)];en.building_hp[rb]=Math.max(0,en.building_hp[rb]-30);} 
-                await sbFetch('users', 'PATCH', {resources: en.resources, army: en.army, building_hp: en.building_hp}, `?username=eq.${t}`); 
+                // ИСПРАВЛЕНО: ilike вместо eq
+                await sbFetch('users', 'PATCH', {resources: en.resources, army: en.army, building_hp: en.building_hp}, `?username=ilike.${t}`); 
                 updateData = {...updateData, army: u.army, glory: u.glory}; 
             } else { 
                 u.army={warriors:0,archers:0,cavalry:0}; 
-                await sbFetch('users', 'PATCH', {army: {warriors: en.army.warriors+10}, glory: en.glory+10}, `?username=eq.${t}`); 
+                // ИСПРАВЛЕНО: ilike вместо eq
+                await sbFetch('users', 'PATCH', {army: {warriors: en.army.warriors+10}, glory: en.glory+10}, `?username=ilike.${t}`); 
                 updateData = {...updateData, army: u.army}; 
             } 
         }
@@ -281,7 +304,7 @@ module.exports = async (req, res) => {
             const r=req.body.resource,a=req.body.amount,p=parseFloat(req.body.pricePerUnit);
             if(u.resources[r]<a) return res.json({success:false,error:'Мало ресов'});
             u.resources[r]-=a; 
-            await sbFetch('orders', 'POST', {id:Date.now(),seller:username,resource:r,amount:a,price_per_unit:p,total:a*p}); 
+            await sbFetch('orders', 'POST', {id:Date.now(),seller:u.username,resource:r,amount:a,price_per_unit:p,total:a*p}); 
         }
         else if (action === 'buy') { 
             const oi=req.body.orderId; const orderArr = await sbFetch('orders', 'GET', null, `?id=eq.${oi}`); 
@@ -289,26 +312,30 @@ module.exports = async (req, res) => {
             const o=orderArr[0]; if(u.balance<o.total) return res.json({success:false,error:'Мало GRC!'}); 
             let tax=o.total*0.1; 
             if(world.castle_owner){
-                const coArr = await sbFetch('users','GET',null,`?username=eq.${world.castle_owner}`); 
-                if(coArr.length>0) await sbFetch('users', 'PATCH', {balance: coArr[0].balance + tax}, `?username=eq.${world.castle_owner}`);
+                // ИСПРАВЛЕНО: ilike вместо eq
+                const coArr = await sbFetch('users','GET',null,`?username=ilike.${world.castle_owner}`); 
+                if(coArr.length>0) await sbFetch('users', 'PATCH', {balance: coArr[0].balance + tax}, `?username=ilike.${world.castle_owner}`);
             } 
             u.balance-=o.total; 
-            const sArr = await sbFetch('users','GET',null,`?username=eq.${o.seller}`); 
-            if(sArr.length>0) await sbFetch('users', 'PATCH', {balance: sArr[0].balance + (o.total-tax)}, `?username=eq.${o.seller}`); 
+            // ИСПРАВЛЕНО: ilike вместо eq
+            const sArr = await sbFetch('users','GET',null,`?username=ilike.${o.seller}`); 
+            if(sArr.length>0) await sbFetch('users', 'PATCH', {balance: sArr[0].balance + (o.total-tax)}, `?username=ilike.${o.seller}`); 
             u.resources[o.resource]+=o.amount; 
             await sbFetch('orders', 'DELETE', null, `?id=eq.${oi}`); 
             updateData = {...updateData, balance: u.balance}; 
         }
         else if (action === 'getMarket') { 
             const orders = await sbFetch('orders', 'GET'); 
-            await sbFetch('users', 'PATCH', updateData, `?username=eq.${username}`); 
+            // ИСПРАВЛЕНО: ilike вместо eq
+            await sbFetch('users', 'PATCH', updateData, `?username=ilike.${username}`); 
             return res.json({ success: true, orders }); 
         }
         else if (action === 'getDepositAddress') {
             try { 
                 const fpRes = await axios.get(`https://faucetpay.io/api/v1/getdepositaddress?api_key=${FP_API_KEY}&currency=${FP_CURRENCY}`); 
                 if(fpRes.data.status === 200) { 
-                    await sbFetch('users', 'PATCH', updateData, `?username=eq.${username}`); 
+                    // ИСПРАВЛЕНО: ilike вместо eq
+                    await sbFetch('users', 'PATCH', updateData, `?username=ilike.${username}`); 
                     return res.json({ success: true, address: fpRes.data.deposit_address }); 
                 } else return res.json({ success: false, error: 'Ошибка API FP' }); 
             } catch(e) { return res.json({ success: false, error: 'Сервер FP недоступен' }); }
@@ -323,7 +350,8 @@ module.exports = async (req, res) => {
                 if(fpRes.data.status===200){
                     u.balance-=ga;
                     updateData.balance = u.balance; 
-                    await sbFetch('users', 'PATCH', updateData, `?username=eq.${username}`); 
+                    // ИСПРАВЛЕНО: ilike вместо eq
+                    await sbFetch('users', 'PATCH', updateData, `?username=ilike.${username}`); 
                     const ud={...u};delete ud.password_hash;
                     return res.json({success:true,user:ud,dogeSent:Math.floor(da)});
                 }else return res.json({success:false,error:fpRes.data.message});
@@ -334,24 +362,26 @@ module.exports = async (req, res) => {
             if(!p) return res.json({success:false,error:'Пост не найден'});
             let pw=u.army.warriors+u.army.archers*2+u.army.cavalry*3;
             if(pw<50) return res.json({success:false,error:'Мало армии'});
-            p.owner=username;
+            p.owner=u.username;
             u.army.warriors=Math.ceil(u.army.warriors*0.9);u.army.archers=Math.ceil(u.army.archers*0.9);u.army.cavalry=Math.ceil(u.army.cavalry*0.9); 
             await sbFetch('world', 'PATCH', { map: world.map }, `?id=eq.main`); 
             updateData = {...updateData, army: u.army}; 
         }
         else if (action === 'getLeaderboard') { 
             const users = await sbFetch('users', 'GET', null, `?select=username,glory&order=glory.desc&limit=10`); 
-            await sbFetch('users', 'PATCH', updateData, `?username=eq.${username}`); 
+            // ИСПРАВЛЕНО: ilike вместо eq
+            await sbFetch('users', 'PATCH', updateData, `?username=ilike.${username}`); 
             return res.json({ success: true, leaderboard: users }); 
         }
         else if (action === 'sync') { 
-            await sbFetch('users', 'PATCH', updateData, `?username=eq.${username}`); 
+            // ИСПРАВЛЕНО: ilike вместо eq
+            await sbFetch('users', 'PATCH', updateData, `?username=ilike.${username}`); 
             const ud = { ...u }; delete ud.password_hash; 
             return res.json({ success: true, user: ud, map: world.map, castleOwner: world.castle_owner, chaosEventEnd: world.chaos_event_end || 0 }); 
         }
 
-        // Сохраняем изменения и возвращаем данные по умолчанию, если action не вернул ответ раньше
-        await sbFetch('users', 'PATCH', updateData, `?username=eq.${username}`);
+        // ИСПРАВЛЕНО: ilike вместо eq
+        await sbFetch('users', 'PATCH', updateData, `?username=ilike.${username}`);
         const ud = { ...u }; delete ud.password_hash;
         return res.json({ success: true, user: ud, map: world.map, castleOwner: world.castle_owner, chaosEventEnd: world.chaos_event_end || 0 });
 
