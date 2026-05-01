@@ -1,5 +1,4 @@
-// ВСТАВЬТЕ СЮДА ССЫЛКУ НА ВАШ ВЕРСЕЛ СЕРВЕР!
-const API_URL = '/api/game'; 
+const API_URL = '/api/game';
 let currentUser = null;
 
 const RES_NAMES = { wood: '🪵Дерево', stone: '🪨Камень', iron: '⛏️Железо', food: '🌾Еда', mana: '🔮Мана' };
@@ -20,19 +19,16 @@ async function apiCall(data) {
         const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); 
         return await res.json(); 
     } catch(e) {
-        console.error("API Error:", e);
-        alert("Сервер недоступен! Проверьте ссылку API_URL в script.js");
-        return { success: false, error: "Network error" };
+        alert("Сервер недоступен!");
+        return { success: false };
     }
 }
 
 async function login() { 
     const u = document.getElementById('username-input').value.trim(); 
     const p = document.getElementById('password-input').value; 
-    if(!u || !p) return alert("Введите логин и пароль!");
-    
+    if(!u || !p) return alert("Введите логин и пароль");
     const data = await apiCall({ action: 'login', username: u, password: p }); 
-    
     if (data.success) { 
         currentUser = data.user; 
         document.getElementById('login-screen').classList.add('hidden'); 
@@ -44,15 +40,13 @@ async function login() {
         if(data.castleOwner) document.getElementById('castle-owner').innerText = data.castleOwner; 
         startAutoSync(); 
         startTimers(); 
-    } else { 
-        alert(data.error); 
-    } 
+    } else { alert(data.error); } 
 }
 
 async function register() { 
     const u = document.getElementById('username-input').value.trim(); 
     const p = document.getElementById('password-input').value; 
-    if(!u || !p) return alert("Введите логин и пароль!");
+    if(!u || !p) return alert("Введите логин и пароль");
     const data = await apiCall({ action: 'register', username: u, password: p }); 
     if (data.success) alert(data.message); 
     else alert(data.error); 
@@ -129,8 +123,31 @@ async function placeSellOrder() { const r=document.getElementById('sell-resource
 async function buyOrder(id) { const d=await apiCall({action:'buy',username:currentUser.username,orderId:id}); if(d.success){currentUser=d.user;updateUI();loadMarket();}else alert(d.error); }
 async function loadMarket() { const d=await apiCall({action:'getMarket', username: currentUser.username}); const l=document.getElementById('market-orders');l.innerHTML=''; if(d.orders && d.orders.length>0){ d.orders.forEach(o=>{const li=document.createElement('li');li.innerHTML=`<span>[${o.resource}] ${o.amount} шт</span><button class="buy-btn" onclick="buyOrder(${o.id})">Купить ${o.total.toFixed(4)} GRC</button>`;l.appendChild(li);}); } else { l.innerHTML = '<li>Пусто</li>'; } }
 
-async function depositFaucetPay() { if(!currentUser) return alert('Сначала войдите!'); const d = await apiCall({action:'getDepositAddress', username: currentUser.username}); if(d.success) { document.getElementById('deposit-address-box').style.display = 'block'; document.getElementById('deposit-address-text').innerText = d.address; } else { alert('Ошибка: ' + d.error); } }
-async function withdrawFunds() { const w=document.getElementById('fp-wallet').value, a=parseFloat(document.getElementById('fp-amount').value); const d=await apiCall({action:'withdraw',username:currentUser.username,wallet:w,grcAmount:a}); if(d.success){ document.getElementById('withdraw-log').innerHTML=`<span style="color:green">Успех! ${d.dogeSent} DOGE</span>`; currentUser=d.user; updateUI(); } else document.getElementById('withdraw-log').innerHTML=`<span style="color:red">${d.error}</span>`; }
+// === ПОПОЛНЕНИЕ И ВЫВОД ===
+async function depositXRocket() { 
+    if(!currentUser) return alert('Сначала войдите!'); 
+    
+    document.getElementById('deposit-address-box').style.display = 'block'; 
+    document.getElementById('deposit-address-box').innerHTML = '<p style="color:yellow;">Генерация адреса...</p>';
+    
+    const d = await apiCall({action:'getDepositAddress', username: currentUser.username}); 
+    if(d.success) { 
+        document.getElementById('deposit-address-box').innerHTML = `
+            <p style="color:#4ecca3; margin-bottom:10px;">Отправьте от <strong>1 DOGE</strong> на этот адрес:</p>
+            <span style="color:#ffc107; font-size:14px; word-wrap:break-word; font-weight:bold;">${d.address}</span>
+            <p class="note" style="margin-top:15px; color:#ff6b6b;">Курс: 1 DOGE = 1000 GRC. Средства зачислятся автоматически в течение 1-5 минут после подтверждения сети.</p>
+        `;
+    } else { 
+        document.getElementById('deposit-address-box').innerHTML = `<span style="color:red;">Ошибка: ${d.error}</span>`;
+    } 
+}
+
+async function withdrawFunds() { 
+    const w=document.getElementById('fp-wallet').value, a=parseFloat(document.getElementById('fp-amount').value); 
+    const d=await apiCall({action:'withdraw',username:currentUser.username,wallet:w,grcAmount:a}); 
+    if(d.success){ document.getElementById('withdraw-log').innerHTML=`<span style="color:green">Успех! ${d.dogeSent} DOGE отправлено</span>`; currentUser=d.user; updateUI(); } 
+    else document.getElementById('withdraw-log').innerHTML=`<span style="color:red">${d.error}</span>`; 
+}
 
 function renderMap(map) { const c=document.getElementById('map-container');c.innerHTML=''; if(!map)return; map.forEach(p=>{const div=document.createElement('div');div.className=`map-post ${p.owner===currentUser.username?'owned':''}`;div.innerHTML=`<h4>${p.name}</h4><p>+${(p.bonus*100).toFixed(0)}%</p><p>${p.owner||'Свободно'}</p>`;if(p.owner!==currentUser.username)div.onclick=()=>capturePost(p.id);c.appendChild(div);}); }
 
@@ -174,4 +191,4 @@ function updateResourceDisplay() {
     document.getElementById('res-stone').innerText=Math.floor(currentUser.resources.stone);
     document.getElementById('res-food').innerText=Math.floor(currentUser.resources.food);
     document.getElementById('res-mana').innerText=Math.floor(currentUser.resources.mana);
-            }
+                                          }
