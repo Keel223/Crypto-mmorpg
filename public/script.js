@@ -1,4 +1,5 @@
-const API_URL = '/api/game';
+// ВСТАВЬТЕ СЮДА ССЫЛКУ НА ВАШ ВЕРСЕЛ СЕРВЕР!
+const API_URL = 'https://crypto-mmorpg.vercel.app/api/game'; 
 let currentUser = null;
 
 const RES_NAMES = { wood: '🪵Дерево', stone: '🪨Камень', iron: '⛏️Железо', food: '🌾Еда', mana: '🔮Мана' };
@@ -14,43 +15,124 @@ const BUILDING_META = {
     forge:      { name: '🔨 Кузница',       baseCost: { wood: 600, stone: 600, iron: 400 },  baseHp: 120, req: 4 }
 };
 
-async function apiCall(data) { const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); return res.json(); }
+async function apiCall(data) { 
+    try {
+        const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); 
+        return await res.json(); 
+    } catch(e) {
+        console.error("API Error:", e);
+        alert("Сервер недоступен! Проверьте ссылку API_URL в script.js");
+        return { success: false, error: "Network error" };
+    }
+}
 
-async function login() { const u = document.getElementById('username-input').value.trim(); const p = document.getElementById('password-input').value; const data = await apiCall({ action: 'login', username: u, password: p }); if (data.success) { currentUser = { name: u, ...data.user }; document.getElementById('login-screen').classList.add('hidden'); document.getElementById('game-screen').classList.remove('hidden'); document.getElementById('user-name').innerText = u; updateUI(); renderMap(data.map); loadMarket(); if(data.castleOwner) document.getElementById('castle-owner').innerText = data.castle_owner; startAutoSync(); startTimers(); } else alert(data.error); }
-async function register() { const u = document.getElementById('username-input').value.trim(); const p = document.getElementById('password-input').value; const data = await apiCall({ action: 'register', username: u, password: p }); if (data.success) alert(data.message); else alert(data.error); }
+async function login() { 
+    const u = document.getElementById('username-input').value.trim(); 
+    const p = document.getElementById('password-input').value; 
+    if(!u || !p) return alert("Введите логин и пароль!");
+    
+    const data = await apiCall({ action: 'login', username: u, password: p }); 
+    
+    if (data.success) { 
+        currentUser = data.user; 
+        document.getElementById('login-screen').classList.add('hidden'); 
+        document.getElementById('game-screen').classList.remove('hidden'); 
+        document.getElementById('user-name').innerText = currentUser.username; 
+        updateUI(); 
+        if(data.map) renderMap(data.map); 
+        loadMarket(); 
+        if(data.castleOwner) document.getElementById('castle-owner').innerText = data.castleOwner; 
+        startAutoSync(); 
+        startTimers(); 
+    } else { 
+        alert(data.error); 
+    } 
+}
+
+async function register() { 
+    const u = document.getElementById('username-input').value.trim(); 
+    const p = document.getElementById('password-input').value; 
+    if(!u || !p) return alert("Введите логин и пароль!");
+    const data = await apiCall({ action: 'register', username: u, password: p }); 
+    if (data.success) alert(data.message); 
+    else alert(data.error); 
+}
 
 function startAutoSync() {
-    setInterval(() => { if (!currentUser) return; let b = currentUser.boosts.gather || 1; if(currentUser.hero==='miner') b *= 1.5; b *= (1 + (currentUser.rings.gather * 0.05)); currentUser.resources.wood += currentUser.buildings.woodcutter * 2 * b; currentUser.resources.iron += currentUser.buildings.mine * 1 * b; currentUser.resources.stone += currentUser.buildings.mine * 1 * b; currentUser.resources.food += currentUser.buildings.farm * 5 * b; currentUser.resources.mana += currentUser.buildings.tower * 0.5 * b; updateResourceDisplay(); }, 1000);
-    setInterval(async () => { const data = await apiCall({ action: 'sync', username: currentUser.name }); if (data.success) { currentUser = { name: currentUser.name, ...data.user }; updateUI(); renderMap(data.map); if(data.castleOwner) document.getElementById('castle-owner').innerText = data.castle_owner; } }, 15000);
+    setInterval(() => { 
+        if (!currentUser) return; 
+        let b = currentUser.boosts.gather || 1; 
+        if(currentUser.hero==='miner') b *= 1.5; 
+        b *= (1 + (currentUser.rings.gather * 0.05)); 
+        currentUser.resources.wood += currentUser.buildings.woodcutter * 2 * b;
+        currentUser.resources.iron += currentUser.buildings.mine * 1 * b;
+        currentUser.resources.stone += currentUser.buildings.mine * 1 * b;
+        currentUser.resources.food += currentUser.buildings.farm * 5 * b;
+        currentUser.resources.mana += currentUser.buildings.tower * 0.5 * b;
+        updateResourceDisplay(); 
+    }, 1000);
+
+    setInterval(async () => { 
+        if(!currentUser) return;
+        const data = await apiCall({ action: 'sync', username: currentUser.username }); 
+        if (data.success) { 
+            currentUser = data.user; 
+            updateUI(); 
+            if(data.map) renderMap(data.map); 
+            if(data.castleOwner) document.getElementById('castle-owner').innerText = data.castleOwner; 
+        } 
+    }, 15000);
 }
-function startTimers() { setInterval(() => { if (!currentUser) return; const now = Date.now(); if (currentUser.construction) { document.getElementById('con-bar').style.display = 'block'; const s = Math.max(0, Math.ceil((currentUser.construction.finishTime - now) / 1000)); document.getElementById('con-text').innerText = `Строится ${BUILDING_META[currentUser.construction.building]?.name} (${s}с)`; } else document.getElementById('con-bar').style.display = 'none'; if (currentUser.expedition) { document.getElementById('exp-bar').style.display = 'block'; const s = Math.max(0, Math.ceil((currentUser.expedition.finishTime - now) / 1000)); document.getElementById('exp-text').innerText = `🗺️ Руины: ${s}с`; } else document.getElementById('exp-bar').style.display = 'none'; }, 1000); }
-function switchTab(tabId) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active')); document.getElementById(`tab-${tabId}`).classList.add('active'); event.target.classList.add('active'); }
 
-async function upgrade(b) { const d = await apiCall({action:'upgrade',username:currentUser.name,building:b}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function repair(b) { const d = await apiCall({action:'repair',username:currentUser.name,building:b}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function recruit(u, a) { const d = await apiCall({action:'recruit',username:currentUser.name,unitType:u,amount:a}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function sendExpedition() { const d=await apiCall({action:'sendExpedition',username:currentUser.name}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function raid() { const t = document.getElementById('raid-target').value.trim(); const d = await apiCall({action:'raid',username:currentUser.name,targetUser:t}); if(d.success) { currentUser={name:currentUser.name,...d.user}; document.getElementById('raid-log').innerHTML=`<span style="color:green">Победа!</span>`; updateUI(); } else { document.getElementById('raid-log').innerHTML=`<span style="color:red">${d.error}</span>`; if(d.user){currentUser={name:currentUser.name,...d.user};updateUI();} } }
-async function findPvp() { const btn = event.target; btn.disabled = true; btn.innerText = 'Поиск...'; const d = await apiCall({action:'findPvp',username:currentUser.name}); btn.disabled = false; btn.innerText = 'Найти противника'; if(d.status === 'waiting') { document.getElementById('pvp-log').innerHTML = `<span style="color:yellow">Ищем...</span>`; } else if (d.status === 'finished') { currentUser = { name: currentUser.name, ...d.user }; document.getElementById('pvp-log').innerHTML = d.success ? `<span style="color:green">Победа!</span>` : `<span style="color:red">Поражение!</span>`; updateUI(); } else alert(d.error); }
-async function buyHero(h) { const d=await apiCall({action:'buyHero',username:currentUser.name,hero:h}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function buyShield() { const d=await apiCall({action:'buyShield',username:currentUser.name}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function upgradeArmy() { const d=await apiCall({action:'upgradeArmy',username:currentUser.name}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function alchemy(t) { const d=await apiCall({action:'alchemy',username:currentUser.name,type:t}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function siegeCastle() { const d=await apiCall({action:'siegeCastle',username:currentUser.name}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI(); if(d.castleOwner) document.getElementById('castle-owner').innerText = d.castle_owner;}else alert(d.error); }
-async function blackMarket(t) { const d=await apiCall({action:'blackMarket',username:currentUser.name,type:t}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function buyRing(t) { const d=await apiCall({action:'buyRing',username:currentUser.name,type:t}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error); }
-async function triggerChaos() { if(confirm('Запустить Вихрь Хаоса для ВСЕХ на 1 час за 500 GRC?')){ const d=await apiCall({action:'triggerChaos',username:currentUser.name}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();}else alert(d.error);} }
-async function getLeaderboard() { const d=await apiCall({action:'getLeaderboard',username:currentUser.name}); if(d.success){ let html=''; d.leaderboard.forEach((p,i)=>html+=`<li>${i+1}. ${p.username} - ${p.glory} Славы</li>`); document.getElementById('leaderboard-list').innerHTML=html; } }
+function startTimers() { 
+    setInterval(() => { 
+        if (!currentUser) return; 
+        const now = Date.now(); 
+        if (currentUser.construction) { 
+            document.getElementById('con-bar').style.display = 'block'; 
+            const s = Math.max(0, Math.ceil((currentUser.construction.finishTime - now) / 1000)); 
+            document.getElementById('con-text').innerText = `Строится ${BUILDING_META[currentUser.construction.building]?.name} (${s}с)`; 
+        } else document.getElementById('con-bar').style.display = 'none'; 
+        
+        if (currentUser.expedition) { 
+            document.getElementById('exp-bar').style.display = 'block'; 
+            const s = Math.max(0, Math.ceil((currentUser.expedition.finishTime - now) / 1000)); 
+            document.getElementById('exp-text').innerText = `🗺️ Руины: ${s}с`; 
+        } else document.getElementById('exp-bar').style.display = 'none'; 
+    }, 1000); 
+}
 
-async function placeSellOrder() { const r=document.getElementById('sell-resource').value, a=parseInt(document.getElementById('sell-amount').value), p=parseFloat(document.getElementById('sell-price').value); const d=await apiCall({action:'sell',username:currentUser.name,resource:r,amount:a,pricePerUnit:p}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();loadMarket();}else alert(d.error); }
-async function buyOrder(id) { const d=await apiCall({action:'buy',username:currentUser.name,orderId:id}); if(d.success){currentUser={name:currentUser.name,...d.user};updateUI();loadMarket();}else alert(d.error); }
-async function loadMarket() { const d=await apiCall({action:'getMarket'}); const l=document.getElementById('market-orders');l.innerHTML=''; d.orders.forEach(o=>{const li=document.createElement('li');li.innerHTML=`<span>[${o.resource}] ${o.amount} шт</span><button class="buy-btn" onclick="buyOrder(${o.id})">Купить ${o.total.toFixed(4)} GRC</button>`;l.appendChild(li);}); }
+function switchTab(tabId) { 
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); 
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active')); 
+    document.getElementById(`tab-${tabId}`).classList.add('active'); 
+    event.target.classList.add('active'); 
+}
 
-async function depositFaucetPay() { if(!currentUser) return alert('Сначала войдите!'); const d = await apiCall({action:'getDepositAddress', username: currentUser.name}); if(d.success) { document.getElementById('deposit-address-box').style.display = 'block'; document.getElementById('deposit-address-text').innerText = d.address; } else { alert('Ошибка: ' + d.error); } }
-async function withdrawFunds() { const w=document.getElementById('fp-wallet').value, a=parseFloat(document.getElementById('fp-amount').value); const d=await apiCall({action:'withdraw',username:currentUser.name,wallet:w,grcAmount:a}); if(d.success){ document.getElementById('withdraw-log').innerHTML=`<span style="color:green">Успех! ${d.dogeSent} DOGE</span>`; currentUser={name:currentUser.name,...d.user}; updateUI(); } else document.getElementById('withdraw-log').innerHTML=`<span style="color:red">${d.error}</span>`; }
+async function upgrade(b) { const d = await apiCall({action:'upgrade',username:currentUser.username,building:b}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function repair(b) { const d = await apiCall({action:'repair',username:currentUser.username,building:b}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function recruit(u, a) { const d = await apiCall({action:'recruit',username:currentUser.username,unitType:u,amount:a}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function sendExpedition() { const d=await apiCall({action:'sendExpedition',username:currentUser.username}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function raid() { const t = document.getElementById('raid-target').value.trim(); const d = await apiCall({action:'raid',username:currentUser.username,targetUser:t}); if(d.success) { currentUser=d.user; document.getElementById('raid-log').innerHTML=`<span style="color:green">Победа!</span>`; updateUI(); } else { document.getElementById('raid-log').innerHTML=`<span style="color:red">${d.error}</span>`; if(d.user){currentUser=d.user;updateUI();} } }
+async function buyHero(h) { const d=await apiCall({action:'buyHero',username:currentUser.username,hero:h}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function buyShield() { const d=await apiCall({action:'buyShield',username:currentUser.username}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function upgradeArmy() { const d=await apiCall({action:'upgradeArmy',username:currentUser.username}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function alchemy(t) { const d=await apiCall({action:'alchemy',username:currentUser.username,type:t}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function siegeCastle() { const d=await apiCall({action:'siegeCastle',username:currentUser.username}); if(d.success){currentUser=d.user;updateUI(); if(d.castleOwner) document.getElementById('castle-owner').innerText = d.castleOwner;}else alert(d.error); }
+async function blackMarket(t) { const d=await apiCall({action:'blackMarket',username:currentUser.username,type:t}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function buyRing(t) { const d=await apiCall({action:'buyRing',username:currentUser.username,type:t}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error); }
+async function triggerChaos() { if(confirm('Запустить Вихрь Хаоса для ВСЕХ на 1 час за 500 GRC?')){ const d=await apiCall({action:'triggerChaos',username:currentUser.username}); if(d.success){currentUser=d.user;updateUI();}else alert(d.error);} }
+async function getLeaderboard() { const d=await apiCall({action:'getLeaderboard',username:currentUser.username}); if(d.success){ let html=''; d.leaderboard.forEach((p,i)=>html+=`<li>${i+1}. ${p.username} - ${p.glory} Славы</li>`); document.getElementById('leaderboard-list').innerHTML=html; } }
+async function capturePost(id) { const d=await apiCall({action:'capturePost',username:currentUser.username,postId:id}); if(d.success){currentUser=d.user;if(d.map)renderMap(d.map);updateUI();}else alert(d.error); }
 
-function renderMap(map) { const c=document.getElementById('map-container');c.innerHTML=''; map.forEach(p=>{const div=document.createElement('div');div.className=`map-post ${p.owner===currentUser.name?'owned':''}`;div.innerHTML=`<h4>${p.name}</h4><p>+${(p.bonus*100).toFixed(0)}%</p><p>${p.owner||'Свободно'}</p>`;if(p.owner!==currentUser.name)div.onclick=()=>capturePost(p.id);c.appendChild(div);}); }
-async function capturePost(id) { const d=await apiCall({action:'capturePost',username:currentUser.name,postId:id}); if(d.success){currentUser={name:currentUser.name,...d.user};renderMap(d.map);updateUI();}else alert(d.error); }
+async function placeSellOrder() { const r=document.getElementById('sell-resource').value, a=parseInt(document.getElementById('sell-amount').value), p=parseFloat(document.getElementById('sell-price').value); const d=await apiCall({action:'sell',username:currentUser.username,resource:r,amount:a,pricePerUnit:p}); if(d.success){currentUser=d.user;updateUI();loadMarket();}else alert(d.error); }
+async function buyOrder(id) { const d=await apiCall({action:'buy',username:currentUser.username,orderId:id}); if(d.success){currentUser=d.user;updateUI();loadMarket();}else alert(d.error); }
+async function loadMarket() { const d=await apiCall({action:'getMarket', username: currentUser.username}); const l=document.getElementById('market-orders');l.innerHTML=''; if(d.orders && d.orders.length>0){ d.orders.forEach(o=>{const li=document.createElement('li');li.innerHTML=`<span>[${o.resource}] ${o.amount} шт</span><button class="buy-btn" onclick="buyOrder(${o.id})">Купить ${o.total.toFixed(4)} GRC</button>`;l.appendChild(li);}); } else { l.innerHTML = '<li>Пусто</li>'; } }
+
+async function depositFaucetPay() { if(!currentUser) return alert('Сначала войдите!'); const d = await apiCall({action:'getDepositAddress', username: currentUser.username}); if(d.success) { document.getElementById('deposit-address-box').style.display = 'block'; document.getElementById('deposit-address-text').innerText = d.address; } else { alert('Ошибка: ' + d.error); } }
+async function withdrawFunds() { const w=document.getElementById('fp-wallet').value, a=parseFloat(document.getElementById('fp-amount').value); const d=await apiCall({action:'withdraw',username:currentUser.username,wallet:w,grcAmount:a}); if(d.success){ document.getElementById('withdraw-log').innerHTML=`<span style="color:green">Успех! ${d.dogeSent} DOGE</span>`; currentUser=d.user; updateUI(); } else document.getElementById('withdraw-log').innerHTML=`<span style="color:red">${d.error}</span>`; }
+
+function renderMap(map) { const c=document.getElementById('map-container');c.innerHTML=''; if(!map)return; map.forEach(p=>{const div=document.createElement('div');div.className=`map-post ${p.owner===currentUser.username?'owned':''}`;div.innerHTML=`<h4>${p.name}</h4><p>+${(p.bonus*100).toFixed(0)}%</p><p>${p.owner||'Свободно'}</p>`;if(p.owner!==currentUser.username)div.onclick=()=>capturePost(p.id);c.appendChild(div);}); }
 
 function updateUI() {
     if(!currentUser) return;
@@ -63,7 +145,8 @@ function updateUI() {
     document.getElementById('shield-status').innerText = currentUser.shield > Date.now() ? '🛡️ Активен' : '❌ Нет';
     document.getElementById('rings-gather').innerText = currentUser.rings.gather;
     document.getElementById('rings-attack').innerText = currentUser.rings.attack;
-    updateResourceDisplay(); renderBuildings();
+    updateResourceDisplay(); 
+    renderBuildings();
 }
 
 function renderBuildings() {
@@ -91,4 +174,4 @@ function updateResourceDisplay() {
     document.getElementById('res-stone').innerText=Math.floor(currentUser.resources.stone);
     document.getElementById('res-food').innerText=Math.floor(currentUser.resources.food);
     document.getElementById('res-mana').innerText=Math.floor(currentUser.resources.mana);
-    }
+            }
