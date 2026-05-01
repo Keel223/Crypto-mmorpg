@@ -10,7 +10,7 @@
     <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div id="login-screen" class="screen">
         <h1>🏰 Crypto Empire</h1>
-        <p class="note">GRC добывается только торговлей с игроками или пополнением!</p>
+        <p class="note">GRC добывается торговлей с игроками или пополнением DOGE!</p>
         <input type="text" id="username-input" placeholder="Логин">
         <input type="password" id="password-input" placeholder="Пароль">
         <button onclick="login()">Войти</button>
@@ -80,9 +80,7 @@
                  </div>
                  <div class="panel">
                     <h3>⚔️ Случайный бой / Руины</h3>
-                    <button onclick="findPvp()" class="btn-danger">Найти противника (PvP)</button>
-                    <p id="pvp-log" class="note"></p>
-                    <button onclick="sendExpedition()" style="margin-top:15px; background:#17a2b8;">🗺️ В Руины (1 час)</button>
+                    <button onclick="sendExpedition()" style="background:#17a2b8;">🗺️ В Руины (1 час)</button>
                  </div>
             </div>
 
@@ -165,19 +163,15 @@
         <div id="tab-wallet" class="tab-content">
             <div class="panel-grid">
                 <div class="panel">
-                    <h3>📥 Пополнить баланс</h3>
-                    <p class="note">Курс: 1 DOGE = 1000 GRC</p>
-                    <button onclick="depositFaucetPay()" class="btn-secondary">Получить адрес пополнения</button>
-                    <div id="deposit-address-box" style="display:none; margin-top:15px; background:#000; padding:15px; border-radius:8px; text-align:center;">
-                        <p style="color:#4ecca3; margin-bottom:10px;">Отправьте DOGE на этот адрес:</p>
-                        <span id="deposit-address-text" style="color:#ffc107; font-size:14px; word-wrap:break-word; font-weight:bold;"></span>
-                        <p class="note" style="margin-top:15px;">Средства зачислятся автоматически.</p>
-                    </div>
+                    <h3>📥 Пополнить баланс (xRocket)</h3>
+                    <p class="note">Курс: 1 DOGE = 1000 GRC. Минимум 1 DOGE.</p>
+                    <button onclick="depositXRocket()" class="btn-secondary">Получить адрес пополнения</button>
+                    <div id="deposit-address-box" style="display:none; margin-top:15px; background:#000; padding:15px; border-radius:8px; text-align:center;"></div>
                 </div>
                 <div class="panel">
-                    <h3>💸 Вывод в DOGE</h3>
+                    <h3>💸 Вывод в DOGE (FaucetPay)</h3>
                     <p class="note">Курс: 10000 GRC = 1 DOGE. Мин: 10000.</p>
-                    <input type="text" id="fp-wallet" placeholder="FaucetPay Email / Кошелек">
+                    <input type="text" id="fp-wallet" placeholder="FaucetPay Email / Кошелек DOGE">
                     <input type="number" id="fp-amount" placeholder="Сумма вывода (GRC)">
                     <button onclick="withdrawFunds()">Вывести DOGE</button>
                     <p id="withdraw-log" class="note"></p>
@@ -188,4 +182,4 @@
 
     <script src="script.js"></script>
 </body>
-  </html>
+</html>
