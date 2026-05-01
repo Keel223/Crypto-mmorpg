@@ -7,17 +7,15 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div id="login-screen" class="screen">
         <h1>🏰 Crypto Empire</h1>
-        <p class="note">GRC добывается только торговлей с игроками или пополнением!</p>
+        <p class="note">GRC добывается только торговлей или пополнением!</p>
         <input type="text" id="username-input" placeholder="Логин">
         <input type="password" id="password-input" placeholder="Пароль">
         <button onclick="login()">Войти</button>
         <button onclick="register()" class="btn-secondary">Зарегистрироваться</button>
     </div>
 
-    <!-- ОСНОВНОЙ ЭКРАН ИГРЫ -->
     <div id="game-screen" class="screen hidden">
         <header>
             <h2>Игрок: <span id="user-name">Player</span></h2>
@@ -37,18 +35,16 @@
 
         <nav class="tabs">
             <button class="tab-btn active" onclick="switchTab('city')">Город</button>
-            <button class="tab-btn" onclick="switchTab('military')">Войско & Карта</button>
-            <button class="tab-btn" onclick="switchTab('magic')">Магия & Герои</button>
+            <button class="tab-btn" onclick="switchTab('military')">Войско</button>
+            <button class="tab-btn" onclick="switchTab('magic')">Магия & GRC</button>
             <button class="tab-btn" onclick="switchTab('market')">P2P Рынок</button>
             <button class="tab-btn" onclick="switchTab('wallet')">Банк 💸</button>
         </nav>
 
-        <!-- ВКЛАДКА ГОРОД -->
         <div id="tab-city" class="tab-content active">
             <div class="panel-grid" id="buildings-grid"></div>
         </div>
 
-        <!-- ВКЛАДКА ВОЙСКО & КАРТА -->
         <div id="tab-military" class="tab-content">
             <div class="panel-grid">
                 <div class="panel">
@@ -60,7 +56,7 @@
                     </div>
                     <div class="stat-box">
                         <p>⚔️ <span id="army-warriors">0</span> | 🏹 <span id="army-archers">0</span> | 🐎 <span id="army-cavalry">0</span></p>
-                        <p>🔨 Кузница: <span id="forge-lvl">0</span> ур. (+<span id="forge-lvl">0</span>0% к атаке)</p>
+                        <p>🔨 Кузница: <span id="forge-lvl">0</span> ур.</p>
                     </div>
                     <button onclick="upgradeArmy()" class="btn-secondary" style="margin-top:10px;">Улучшить армию (GRC)</button>
                 </div>
@@ -68,7 +64,6 @@
                     <h3>🛡️ Защита базы</h3>
                     <p>Щит от рейдов: <span id="shield-status" style="font-weight:bold;">❌ Нет</span></p>
                     <button onclick="buyShield()" class="btn-danger">Купить Щит (20 GRC / 24ч)</button>
-                    <p class="note">Щит защитит ваши ресурсы от рейдов других игроков.</p>
                 </div>
             </div>
             
@@ -80,17 +75,16 @@
                     <p id="raid-log" class="note"></p>
                  </div>
                  <div class="panel">
-                    <h3>⚔️ Случайный бой & Экспедиции</h3>
+                    <h3>⚔️ Случайный бой / Руины</h3>
                     <button onclick="findPvp()" class="btn-danger">Найти противника (PvP)</button>
                     <p id="pvp-log" class="note"></p>
-                    <button onclick="sendExpedition()" style="margin-top:15px; background:#17a2b8;">🗺️ Отправить в Руины (1 час)</button>
+                    <button onclick="sendExpedition()" style="margin-top:15px; background:#17a2b8;">🗺️ В Руины (1 час)</button>
                  </div>
             </div>
 
             <div class="panel" style="margin-top:15px; border-color: #ffc107;">
-                <h3>🏰 Великий Замок</h3>
-                <p>Владыка Замка: <span id="castle-owner" style="color:#ffc107; font-weight:bold;">Нет</span></p>
-                <p class="note">Владыка получает 10% налога со ВСЕХ сделок на P2P рынке! Для осады нужно 5000 силы армии. Потери при осаде: 50% армии.</p>
+                <h3>🏰 Великий Замок (Владыка: <span id="castle-owner" style="color:#ffc107; font-weight:bold;">Нет</span>)</h3>
+                <p class="note">Владыка получает 10% налога со ВСЕХ сделок на рынке! Для осады нужно 5000 силы. Потери: 50% армии.</p>
                 <button onclick="siegeCastle()" class="btn-danger">Осадить Замок!</button>
             </div>
 
@@ -98,32 +92,53 @@
                 <h3>🗺️ Карта Аванпостов</h3>
                 <div id="map-container" class="map-grid"></div>
             </div>
+
+            <div class="panel" style="margin-top:15px;">
+                <h3>🏆 Рейтинг Славы</h3>
+                <button onclick="getLeaderboard()">Обновить рейтинг</button>
+                <ul id="leaderboard-list"></ul>
+            </div>
         </div>
 
-        <!-- ВКЛАДКА МАГИЯ & ГЕРОИ -->
         <div id="tab-magic" class="tab-content">
             <div class="panel-grid">
                 <div class="panel">
                     <h3>🧙 Наём Героев (За GRC)</h3>
                     <p>Ваш герой: <span id="hero-name" style="color:#4ecca3; font-weight:bold;">Нет</span></p>
-                    <p class="note">Герой дает постоянный пассивный бонус!</p>
                     <button onclick="buyHero('miner')">🧙 Шахтер (50 GRC / +50% добычи)</button>
                     <button onclick="buyHero('general')" style="margin-top:10px;">⚔️ Генерал (50 GRC / +20% атаки)</button>
                 </div>
                 <div class="panel">
+                    <h3>💍 Кольца Всевластия (За GRC)</h3>
+                    <p class="note">Слоты колец (макс. 5 шт). Сжигают GRC навсегда!</p>
+                    <p>💍 Добычи: <span id="rings-gather">0</span>/5 | ⚔️ Атаки: <span id="rings-attack">0</span>/5</p>
+                    <button onclick="buyRing('gather')">💍 Кольцо Добычи (200 GRC / +5%)</button>
+                    <button onclick="buyRing('attack')" style="margin-top:10px;">💍 Кольцо Атаки (200 GRC / +5%)</button>
+                </div>
+                <div class="panel">
+                    <h3>⚖️ Черный Рынок (Слив GRC)</h3>
+                    <p class="note">Покупка ресурсов у системы. Сжигает GRC!</p>
+                    <button onclick="blackMarket('wood')">💰 100 GRC ➡️ 10000 🪵</button>
+                    <button onclick="blackMarket('iron')" style="margin-top:10px;">💰 100 GRC ➡️ 5000 ⛏️</button>
+                    <button onclick="blackMarket('stone')" style="margin-top:10px;">💰 100 GRC ➡️ 5000 🪨</button>
+                </div>
+                <div class="panel">
+                    <h3>🌪️ Вихрь Хаоса</h3>
+                    <p class="note">ЗАПЛАТИТЕ 500 GRC, чтобы удвоить добычу ВСЕМ на сервере на 1 час!</p>
+                    <button onclick="triggerChaos()" class="btn-danger">Активировать Вихрь</button>
+                </div>
+                <div class="panel">
                     <h3>⚗️ Алхимия (Обмен ресурсов)</h3>
-                    <p class="note">Конвертируйте излишки в редкие ресурсы.</p>
-                    <button onclick="alchemy('wood_to_stone')">🔄 500 🪵 Дерево ➡️ 200 🪨 Камень</button>
-                    <button onclick="alchemy('food_to_iron')" style="margin-top:10px;">🔄 500 🌾 Еда ➡️ 200 ⛏️ Железо</button>
+                    <button onclick="alchemy('wood_to_stone')">🔄 500 🪵 ➡️ 200 🪨</button>
+                    <button onclick="alchemy('food_to_iron')" style="margin-top:10px;">🔄 500 🌾 ➡️ 200 ⛏️</button>
                 </div>
             </div>
         </div>
 
-        <!-- ВКЛАДКА P2P РЫНОК -->
         <div id="tab-market" class="tab-content">
             <div class="panel">
                 <h3>📈 Продать ресурсы за GRC</h3>
-                <p class="note">Выставляйте любую цену (напр. 0.001). Налог Владыке Замка: 10%.</p>
+                <p class="note">Налог Владыке Замка: 10%.</p>
                 <select id="sell-resource">
                     <option value="wood">🪵 Дерево</option>
                     <option value="iron">⛏️ Железо</option>
@@ -135,24 +150,27 @@
                 <button onclick="placeSellOrder()">Выставить на продажу</button>
             </div>
             <div class="panel">
-                <h3>🛒 Покупка ресурсов за GRC</h3>
+                <h3>🛒 Покупка за GRC</h3>
                 <ul id="market-orders"></ul>
             </div>
         </div>
 
-        <!-- ВКЛАДКА БАНК -->
         <div id="tab-wallet" class="tab-content">
             <div class="panel-grid">
                 <div class="panel">
                     <h3>📥 Пополнить баланс</h3>
-                    <p class="note">Курс покупки: 1 DOGE = 1000 GRC</p>
-                    <button onclick="depositFaucetPay()" class="btn-secondary">Оплатить через FaucetPay</button>
-                    <p class="note" style="margin-top:10px;">Вы перейдете на официальный сайт FaucetPay для безопасной оплаты.</p>
+                    <p class="note">Курс: 1 DOGE = 1000 GRC</p>
+                    <button onclick="depositFaucetPay()" class="btn-secondary">Получить адрес пополнения</button>
+                    <div id="deposit-address-box" style="display:none; margin-top:15px; background:#000; padding:15px; border-radius:8px; text-align:center;">
+                        <p style="color:#4ecca3; margin-bottom:10px;">Отправьте DOGE на этот адрес:</p>
+                        <span id="deposit-address-text" style="color:#ffc107; font-size:14px; word-wrap:break-word; font-weight:bold;"></span>
+                        <p class="note" style="margin-top:15px;">Средства зачислятся автоматически.</p>
+                    </div>
                 </div>
                 <div class="panel">
                     <h3>💸 Вывод в DOGE</h3>
-                    <p class="note">Курс вывода: 10000 GRC = 1 DOGE. Минимальная сумма: 10000 GRC.</p>
-                    <input type="text" id="fp-wallet" placeholder="Ваш FaucetPay Email / Кошелек">
+                    <p class="note">Курс: 10000 GRC = 1 DOGE. Мин: 10000.</p>
+                    <input type="text" id="fp-wallet" placeholder="FaucetPay Email / Кошелек">
                     <input type="number" id="fp-amount" placeholder="Сумма вывода (GRC)">
                     <button onclick="withdrawFunds()">Вывести DOGE</button>
                     <p id="withdraw-log" class="note"></p>
@@ -163,4 +181,4 @@
 
     <script src="script.js"></script>
 </body>
-                                                                                             </html>
+                            </html>
