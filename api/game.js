@@ -3,8 +3,8 @@ const crypto = require('crypto');
 const { HttpsProxyAgent } = require('https-proxy-agent'); // Нужна для прокси
 
 // === НАСТРОЙКИ БАЗЫ ДАННЫХ UPSTASH ===
-const UPSTASH_URL = 'https://willing-cicada-111832.upstash.io/';
-const UPSTASH_TOKEN = 'gQAAAAAAAbTYAAIgcDE3OWExNWY2NTdkMTk0NDE1ODA3YzNiY2Y5OThkYTYwYg';
+const UPSTASH_URL = 'httpsilling-cicada-111832.upstash.io/';
+const UPSTASH_TOKEN = 'gQAAAAbTYAAIgcDE3OWExNWY2NTdkMTk0NDE1ODA3YzNiY2Y5OThkYTYwYg';
 
 // === НАСТРОЙКИ XROCKET ===
 const XROCKET_API_KEY = '37e361c1f41bdde2e63381737';
